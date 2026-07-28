@@ -275,7 +275,7 @@ def register(mcp):
             return f"Komoot authentication failed: {e}"
 
         sport_komoot = _komoot_native_sport_for(sport)
-        planner = KomootNativePlanner(auth_pair=auth_pair)
+        planner = KomootNativePlanner(auth_pair=auth_pair, session=client._session)
         try:
             route = planner.plan(
                 waypoints=all_waypoints, sport_komoot=sport_komoot,

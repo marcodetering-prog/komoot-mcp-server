@@ -1,9 +1,10 @@
 """Phase 3 tests — 20 new tools that bypass kompy via direct REST.
 
 Each tool wraps a ``client.py`` method that hits Komoot directly with
-``requests``. We monkeypatch ``requests.request`` (the single
-underlying call all ``_http_request`` helpers route through) so a
-single tiny fixture covers GET/POST/PATCH/DELETE.
+``requests``. We monkeypatch ``requests.Session.request`` — the single
+underlying call all ``_http_request`` helpers route through, now via the
+per-client pooled Session — so a single tiny fixture covers
+GET/POST/PATCH/DELETE.
 
 Tests exercise the *tool* layer (not just the client) because that's
 where the LLM-friendly rendering lives — and where docstring contracts
@@ -92,13 +93,13 @@ def auth_token():
 
 
 def _patch_request(json_body=None, text="ok", status=200):
-    """Patch ``requests.request`` to return a canned response.
+    """Patch ``requests.Session.request`` to return a canned response.
 
-    All Phase 3 helpers go through ``requests.request``, so this single
-    patch covers GET / POST / PATCH / DELETE.
+    All Phase 3 helpers go through the pooled session's ``request``, so
+    this single patch covers GET / POST / PATCH / DELETE.
     """
     resp = _make_response(status=status, json_body=json_body, text=text)
-    return patch("komoot_mcp.client.requests.request", return_value=resp)
+    return patch("requests.Session.request", return_value=resp)
 
 
 def _stub_kompy_auth(client):
@@ -175,7 +176,7 @@ async def test_create_share_link(registered_tools, auth_token):
 async def test_revoke_share_link(registered_tools, auth_token):
     # DELETE often returns 204 No Content — patch the response shape.
     resp = _make_response(status=204, text="")
-    with patch("komoot_mcp.client.requests.request", return_value=resp):
+    with patch("requests.Session.request", return_value=resp):
         from komoot_mcp.context import get_client
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_revoke_share_link"](tour_id=42)
@@ -408,7 +409,7 @@ async def test_tools_render_errors_not_exceptions(
 ):
     """If Komoot returns 500, the tool layer renders an error string."""
     resp = _make_response(status=500, text="boom")
-    with patch("komoot_mcp.client.requests.request", return_value=resp):
+    with patch("requests.Session.request", return_value=resp):
         from komoot_mcp.context import get_client
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_tour_line"](tour_id=42)

@@ -108,15 +108,20 @@ class KomootNativePlanner:
     # planned in the browser.
     _EMBED = "coordinates,way_types,surfaces,directions"
 
-    def __init__(self, auth_pair):
+    def __init__(self, auth_pair, session=None):
         """``auth_pair``: ``(user_id, token)`` tuple for HTTP Basic auth.
 
         The token is the long-lived password-equivalent returned by
         Komoot's v006 login (see :class:`AuthManager.login`), NOT the
         user's actual password. ``KomootClient._basic_auth`` builds
         this tuple from the kompy connector.
+
+        ``session``: pass the calling ``KomootClient``'s Session so the plan
+        POST and the follow-up save POST reuse one connection to
+        www.komoot.com. Falls back to a private Session, never a shared one.
         """
         self._auth = auth_pair
+        self._session = session if session is not None else requests.Session()
 
     def plan(self, waypoints, sport_komoot, constitution=3):
         """Plan a route through the supplied waypoints.
@@ -165,7 +170,7 @@ class KomootNativePlanner:
         }
         params = {"sport": sport_komoot, "_embedded": self._EMBED}
         try:
-            resp = requests.post(
+            resp = self._session.post(
                 self.BASE,
                 params=params,
                 auth=self._auth,

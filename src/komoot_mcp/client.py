@@ -37,6 +37,21 @@ class KomootClient:
         self.auth = auth_manager
         self.rl = rate_limiter
         self._api = None
+        # Per-instance, never module-level: KomootClient is built per request
+        # (see komoot_mcp.context), so pooled sockets stay inside one tenant's
+        # request. Credentials go per-call via auth=; setting session.auth
+        # would outlive the call and defeat the no_auth=True branch below.
+        self._session = requests.Session()
+
+    def close(self):
+        """Release this client's pooled sockets. Teardown must never raise."""
+        session = getattr(self, "_session", None)
+        if session is None:
+            return
+        try:
+            session.close()
+        except Exception:
+            pass
 
     def _get_api(self):
         """Lazily create the kompy connector with stored credentials."""
@@ -587,7 +602,7 @@ class KomootClient:
         await self.rl.acquire()
 
         def _post():
-            return requests.post(
+            return self._session.post(
                 url=url,
                 auth=(
                     api.authentication.get_email_address(),
@@ -676,7 +691,7 @@ class KomootClient:
         await self.rl.acquire()
 
         def _post():
-            return requests.post(
+            return self._session.post(
                 url, auth=auth_pair, headers=headers, json=save_body,
                 timeout=60,
             )
@@ -763,7 +778,7 @@ class KomootClient:
         }
 
         def _do():
-            return requests.get(
+            return self._session.get(
                 url, auth=auth_pair, headers=headers, params=params, timeout=30,
             )
 
@@ -924,7 +939,7 @@ class KomootClient:
         auth_pair = None if no_auth else self._basic_auth()
 
         def _do():
-            return requests.request(
+            return self._session.request(
                 method=method, url=url, params=params, json=json_body,
                 auth=auth_pair, headers=headers, timeout=30,
             )
