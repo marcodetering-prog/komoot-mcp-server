@@ -14,6 +14,7 @@ unchanged for single-user setups.
 from __future__ import annotations
 
 import os
+import threading
 from contextvars import ContextVar
 from typing import Optional
 
@@ -42,24 +43,36 @@ _ors_api_key_var: ContextVar[Optional[str]] = ContextVar(
 )
 
 
-# Shared singletons that don't carry tenant identity. Rate limiting is
-# per-process (we throttle the whole server, not per-user). Geocoder
-# talks to public APIs with no user state.
+# Shared across tenants on purpose: no credentials, no user state, so this
+# leaks nothing. Throttling is per-process by design, not per-user. It is the
+# shared mutable throttle state that needs the lock below.
 _rate_limiter: RateLimiter | None = None
 _geocoder: Geocoder | None = None
+
+# Defensive rather than a live fix: every caller today resolves these on the
+# event loop, where check-and-assign has no await to interleave on. The lock
+# keeps it correct if one ever moves into a worker thread, since a discarded
+# instance takes its share of the rate budget with it. Lazy so
+# KOMOOT_RATE_LIMIT is read at first use.
+_singleton_lock = threading.Lock()
 
 
 def get_rate_limiter() -> RateLimiter:
     global _rate_limiter
+    # Double-checked: the fast path stays lock-free once built.
     if _rate_limiter is None:
-        _rate_limiter = RateLimiter()
+        with _singleton_lock:
+            if _rate_limiter is None:
+                _rate_limiter = RateLimiter()
     return _rate_limiter
 
 
 def get_geocoder() -> Geocoder:
     global _geocoder
     if _geocoder is None:
-        _geocoder = Geocoder()
+        with _singleton_lock:
+            if _geocoder is None:
+                _geocoder = Geocoder()
     return _geocoder
 
 

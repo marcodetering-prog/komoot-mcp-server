@@ -7,9 +7,13 @@ operation behind the platform gateway.
 import asyncio
 import json
 import os
+import threading
+import time
+from unittest.mock import patch
 
 import pytest
 
+from komoot_mcp import context
 from komoot_mcp.auth import AuthManager
 from komoot_mcp.context import (
     clear_request_state,
@@ -437,3 +441,58 @@ class TestInternalSecretMiddleware:
 
         await mw(scope, receive, send)
         assert called == [True]
+
+
+class TestSharedSingletonsBuiltOnce:
+    """Concurrent first use must build exactly one instance."""
+
+    @staticmethod
+    def _race(getter, ctor_name, threads=16):
+        """Race `threads` callers, holding the construction window open.
+
+        A plain barrier is not enough: the real constructors finish inside one
+        GIL slice, so the unlocked race almost never loses. Sleeping in the
+        patched constructor widens the window, which is what makes lock
+        removal fail this test every run instead of once in a thousand.
+        """
+        built = []
+        gate = threading.Barrier(threads)
+        real = getattr(context, ctor_name)
+
+        def slow_ctor(*a, **kw):
+            time.sleep(0.02)
+            obj = real(*a, **kw)
+            built.append(obj)
+            return obj
+
+        got = []
+        got_lock = threading.Lock()
+
+        def worker():
+            gate.wait(timeout=10)
+            obj = getter()
+            with got_lock:
+                got.append(obj)
+
+        with patch.object(context, ctor_name, slow_ctor):
+            pool = [threading.Thread(target=worker) for _ in range(threads)]
+            for t in pool:
+                t.start()
+            for t in pool:
+                t.join(timeout=20)
+                assert not t.is_alive(), "singleton getter deadlocked"
+        return built, got
+
+    def test_concurrent_first_use_builds_one_rate_limiter(self, monkeypatch):
+        monkeypatch.setattr(context, "_rate_limiter", None)
+        built, got = self._race(context.get_rate_limiter, "RateLimiter")
+        assert len(built) == 1, f"RateLimiter built {len(built)} times"
+        assert len(got) == 16
+        assert all(o is got[0] for o in got)
+
+    def test_concurrent_first_use_builds_one_geocoder(self, monkeypatch):
+        monkeypatch.setattr(context, "_geocoder", None)
+        built, got = self._race(context.get_geocoder, "Geocoder")
+        assert len(built) == 1, f"Geocoder built {len(built)} times"
+        assert len(got) == 16
+        assert all(o is got[0] for o in got)
