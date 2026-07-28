@@ -1,4 +1,14 @@
-"""Routing tools for Komoot MCP server."""
+"""Routing tools for Komoot MCP server.
+
+The geocoder, the ORS manager and Komoot's planner are all synchronous, so every
+call into them goes through a worker thread; inline, one slow round trip stalls
+the loop and every other tenant on it. Geocoding uses its own executor (see
+``_geocode``), everything else the default pool.
+"""
+
+import asyncio
+import functools
+from concurrent.futures import ThreadPoolExecutor
 
 from komoot_mcp.context import get_client, get_geocoder, get_routing_manager
 from komoot_mcp.routing import (
@@ -7,6 +17,23 @@ from komoot_mcp.routing import (
     RoutingError,
 )
 from komoot_mcp.tools.data_tools import _format_gpx_response
+
+
+# One worker, for two reasons: the Geocoder's throttle sleeps up to 0.5s, and on
+# the default pool those waits would occupy threads the kompy calls in client.py
+# need; serialising also keeps one thread at a time inside `_wait`, which the
+# shared Geocoder does not synchronise. Costs nothing, as the throttle already
+# caps this at two calls a second.
+_GEOCODE_EXECUTOR = ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="komoot-geocode",
+)
+
+
+async def _geocode(fn, *args, **kwargs):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        _GEOCODE_EXECUTOR, functools.partial(fn, *args, **kwargs),
+    )
 
 
 # Map our public sport identifiers (used by komoot_plan_route) to the
@@ -54,7 +81,7 @@ def register(mcp):
                 try:
                     lat = float(parts[0].strip())
                     lon = float(parts[1].strip())
-                    result = geocoder.reverse(lat, lon)
+                    result = await _geocode(geocoder.reverse, lat, lon)
                     return (
                         f"Location: {result.get('display_name', 'unknown')}\n"
                         f"  City: {result.get('city', '?')}\n"
@@ -65,7 +92,7 @@ def register(mcp):
                 except ValueError:
                     pass
 
-            results = geocoder.forward(query, limit)
+            results = await _geocode(geocoder.forward, query, limit)
             if not results:
                 return f"No locations found for '{query}'"
             lines = [f"Geocoding results for '{query}':"]
@@ -114,13 +141,13 @@ def register(mcp):
 
         try:
             geocoder = get_geocoder()
-            start_coords = _parse_location(start, geocoder)
+            start_coords = await _parse_location(start, geocoder)
             if not start_coords:
                 return f"Could not geocode start location: {start}"
 
             end_coords = None
             if end:
-                end_coords = _parse_location(end, geocoder)
+                end_coords = await _parse_location(end, geocoder)
                 if not end_coords:
                     return f"Could not geocode end location: {end}"
 
@@ -132,7 +159,8 @@ def register(mcp):
                     if wp:
                         waypoint_coords.append(wp)
 
-            result = routing.plan_route(
+            result = await asyncio.to_thread(
+                routing.plan_route,
                 start=start_coords,
                 end=end_coords,
                 roundtrip=roundtrip,
@@ -223,13 +251,13 @@ def register(mcp):
         # geocode, it wants lat/lng directly.
         try:
             geocoder = get_geocoder()
-            start_coords = _parse_location(start, geocoder)
+            start_coords = await _parse_location(start, geocoder)
             if not start_coords:
                 return f"Could not geocode start location: {start}"
 
             end_coords = None
             if end:
-                end_coords = _parse_location(end, geocoder)
+                end_coords = await _parse_location(end, geocoder)
                 if not end_coords:
                     return f"Could not geocode end location: {end}"
             elif roundtrip:
@@ -270,15 +298,21 @@ def register(mcp):
         # --- Step 1: plan via Komoot's native planner ---
         client = get_client()
         try:
-            auth_pair = client._basic_auth()
+            # First call builds the kompy connector, which logs in over blocking
+            # requests with no timeout set. Never run that on the loop.
+            auth_pair = await asyncio.to_thread(client._basic_auth)
         except Exception as e:
             return f"Komoot authentication failed: {e}"
 
         sport_komoot = _komoot_native_sport_for(sport)
         planner = KomootNativePlanner(auth_pair=auth_pair)
         try:
-            route = planner.plan(
-                waypoints=all_waypoints, sport_komoot=sport_komoot,
+            # The planner POST has a 60 s timeout, so it can hold its worker
+            # that long.
+            route = await asyncio.to_thread(
+                planner.plan,
+                waypoints=all_waypoints,
+                sport_komoot=sport_komoot,
             )
         except RoutingError as e:
             return f"Route planning failed: {e}"
@@ -323,11 +357,11 @@ def register(mcp):
         return "\n".join(lines)
 
 
-def _parse_location(s: str, geocoder):
+async def _parse_location(s: str, geocoder):
     coords = _parse_coords(s)
     if coords:
         return coords
-    results = geocoder.forward(s, limit=1)
+    results = await _geocode(geocoder.forward, s, limit=1)
     if results:
         r = results[0]
         return (r["lat"], r["lon"])
