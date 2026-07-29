@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 import urllib.request
 import urllib.parse
@@ -7,15 +8,30 @@ class GeocoderError(Exception):
     pass
 
 class Geocoder:
+    """Photon geocoding client with a simple outbound throttle.
+
+    ``context.get_geocoder`` hands out one process-wide instance, so
+    ``_last_call`` is shared mutable state and ``_wait`` locks it.
+
+    Note the tool layer still calls this synchronously from async handlers,
+    so ``_wait``'s ``time.sleep`` blocks the event loop. Moving those calls
+    onto ``asyncio.to_thread`` is a separate change; the lock is what makes
+    the throttle correct once several threads do share the instance.
+    """
+
     def __init__(self):
         self._last_call = 0.0
         self._min_interval = 0.5
+        self._lock = threading.Lock()
 
     def _wait(self):
-        elapsed = time.monotonic() - self._last_call
-        if elapsed < self._min_interval:
-            time.sleep(self._min_interval - elapsed)
-        self._last_call = time.monotonic()
+        # Lock spans the sleep on purpose: check-sleep-stamp has to be atomic,
+        # or two threads read the same stale _last_call and fire together.
+        with self._lock:
+            elapsed = time.monotonic() - self._last_call
+            if elapsed < self._min_interval:
+                time.sleep(self._min_interval - elapsed)
+            self._last_call = time.monotonic()
 
     def forward(self, query: str, limit: int = 5) -> list[dict]:
         self._wait()
