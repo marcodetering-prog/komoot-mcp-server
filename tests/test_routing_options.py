@@ -10,6 +10,7 @@ These pin down the fixes for two production bugs reported by user testing:
   error 2010 even at well-known places. The fix lives in
   ``routing._to_lon_lat`` + the new ``radiuses`` kwarg.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,9 +19,9 @@ import pytest
 
 from komoot_mcp.routing import (
     _DEFAULT_SNAP_RADIUS_M,
+    RoutingManager,
     _filter_avoid_features,
     _to_lon_lat,
-    RoutingManager,
 )
 
 
@@ -70,6 +71,7 @@ class _FakeResponse:
 
     def json(self):  # pragma: no cover - only used on error path
         import json as _json
+
         return _json.loads(self.text)
 
 
@@ -82,17 +84,20 @@ def gpx_post_calls(monkeypatch):
     calls: list[dict[str, Any]] = []
 
     def fake_post(url, data=None, headers=None, timeout=None, **kwargs):
-        calls.append({
-            "url": url,
-            "data": data,
-            "headers": headers,
-            "timeout": timeout,
-        })
+        calls.append(
+            {
+                "url": url,
+                "data": data,
+                "headers": headers,
+                "timeout": timeout,
+            }
+        )
         return _FakeResponse(status_code=200, text="<gpx></gpx>")
 
     # Patch where it's looked up — ``komoot_mcp.routing`` imports
     # ``requests`` at module scope.
     import komoot_mcp.routing as routing_mod
+
     monkeypatch.setattr(routing_mod.requests, "post", fake_post)
     return calls
 
@@ -115,45 +120,43 @@ class TestProfileAwareAvoidFeatures:
     """ORS error 2003: ``highways`` is invalid for cycling/foot profiles."""
 
     def test_cycling_mountain_drops_highways(self):
-        assert "highways" not in _filter_avoid_features(
-            "cycling-mountain", ["highways", "ferries"]
-        )
+        assert "highways" not in _filter_avoid_features("cycling-mountain", ["highways", "ferries"])
 
     def test_cycling_mountain_keeps_steps(self):
-        assert "steps" in _filter_avoid_features(
-            "cycling-mountain", ["steps", "highways"]
-        )
+        assert "steps" in _filter_avoid_features("cycling-mountain", ["steps", "highways"])
 
     def test_driving_car_keeps_highways(self):
-        assert "highways" in _filter_avoid_features(
-            "driving-car", ["highways", "tollways"]
-        )
+        assert "highways" in _filter_avoid_features("driving-car", ["highways", "tollways"])
 
     def test_foot_hiking_drops_highways(self):
-        assert "highways" not in _filter_avoid_features(
-            "foot-hiking", ["highways", "ferries"]
-        )
+        assert "highways" not in _filter_avoid_features("foot-hiking", ["highways", "ferries"])
 
     def test_build_options_mtb_with_prefer_trails_has_no_highways(self, manager):
         """The MTB + prefer_trails combo that originally produced
         ``error 2003: avoid_features - highways is not valid with profile
         - cycling-mountain`` must never put ``highways`` on the wire."""
         opts = manager._build_options(
-            "cycling-mountain", prefer_trails=True, avoid_roads=False,
+            "cycling-mountain",
+            prefer_trails=True,
+            avoid_roads=False,
         )
         assert opts is not None
         assert "highways" not in opts.get("avoid_features", [])
 
     def test_build_options_mtb_with_avoid_roads_has_no_highways(self, manager):
         opts = manager._build_options(
-            "cycling-mountain", prefer_trails=False, avoid_roads=True,
+            "cycling-mountain",
+            prefer_trails=False,
+            avoid_roads=True,
         )
         if opts is not None:
             assert "highways" not in opts.get("avoid_features", [])
 
     def test_build_options_driving_with_avoid_roads_keeps_highways(self, manager):
         opts = manager._build_options(
-            "driving-car", prefer_trails=False, avoid_roads=True,
+            "driving-car",
+            prefer_trails=False,
+            avoid_roads=True,
         )
         assert opts is not None
         assert "highways" in opts["avoid_features"]
@@ -187,6 +190,7 @@ class TestCoordOrderAndSnapping:
         assert coords[-1] == [8.4045, 49.0136]
 
         import json
+
         body = json.loads(gpx_post_calls[0]["data"])
         assert body["coordinates"][0] == [8.4001, 49.0094]
         assert body["coordinates"][-1] == [8.4045, 49.0136]
@@ -205,22 +209,29 @@ class TestCoordOrderAndSnapping:
         assert all(r >= _DEFAULT_SNAP_RADIUS_M for r in radii)
 
         import json
+
         body = json.loads(gpx_post_calls[0]["data"])
         assert body["radiuses"] == radii
 
     def test_plan_route_mtb_prefer_trails_does_not_send_highways(
-        self, manager, gpx_post_calls,
+        self,
+        manager,
+        gpx_post_calls,
     ):
         # End-to-end: the MTB + prefer_trails case that triggered the
         # production bug must not put ``highways`` on the wire.
         start = (49.0094, 8.4001)
         end = (49.0136, 8.4045)
         manager.plan_route(
-            start=start, end=end, sport="mountain_bike", prefer_trails=True,
+            start=start,
+            end=end,
+            sport="mountain_bike",
+            prefer_trails=True,
         )
         options = manager.client.calls[0].get("options") or {}
         assert "highways" not in options.get("avoid_features", [])
         import json
+
         body = json.loads(gpx_post_calls[0]["data"])
         gpx_avoid = (body.get("options") or {}).get("avoid_features", [])
         assert "highways" not in gpx_avoid

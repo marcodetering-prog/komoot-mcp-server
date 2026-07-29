@@ -50,8 +50,8 @@ def register(mcp):
         n_tours = data.get("number_of_tours") or data.get("tour_count")
         creator = data.get("creator") or {}
         creator_name = (
-            creator.get("display_name") or creator.get("username") or "?"
-        ) if isinstance(creator, dict) else "?"
+            (creator.get("display_name") or creator.get("username") or "?") if isinstance(creator, dict) else "?"
+        )
         desc = data.get("description") or data.get("intro") or ""
         if len(desc) > 300:
             desc = desc[:297] + "..."
@@ -68,7 +68,8 @@ def register(mcp):
 
     @mcp.tool()
     async def komoot_get_collection_tours(
-        collection_id: int, page: int = 0,
+        collection_id: int,
+        page: int = 0,
     ) -> str:
         """List the tours inside a collection (compilation).
 
@@ -81,7 +82,8 @@ def register(mcp):
         """
         try:
             data = await get_client().get_collection_tours(
-                collection_id, page=page,
+                collection_id,
+                page=page,
             )
         except Exception as e:
             return f"Error getting collection tours: {e}"
@@ -89,20 +91,14 @@ def register(mcp):
         items = _items(data)
         if not items:
             return f"No tours found in collection {collection_id}."
-        lines = [
-            f"Collection {collection_id} tours (page {page}, {len(items)}):"
-        ]
+        lines = [f"Collection {collection_id} tours (page {page}, {len(items)}):"]
         for t in items:
             if not isinstance(t, dict):
                 continue
             sub_emb = t.get("_embedded") or {}
             tour = None
             if isinstance(sub_emb, dict):
-                tour = (
-                    sub_emb.get("tour")
-                    or sub_emb.get("main_tour")
-                    or sub_emb.get("reference")
-                )
+                tour = sub_emb.get("tour") or sub_emb.get("main_tour") or sub_emb.get("reference")
             if not isinstance(tour, dict):
                 tour = t
             tid = tour.get("id", "?")

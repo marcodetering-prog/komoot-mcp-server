@@ -5,6 +5,7 @@ Komoot upload endpoint with HTTP 400. The fix lives in
 ``routing._ors_rte_to_trk_gpx`` and is called from
 ``RoutingManager.plan_route`` before returning.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -12,7 +13,6 @@ from typing import Any
 import pytest
 
 from komoot_mcp.routing import RoutingManager, _ors_rte_to_trk_gpx
-
 
 # An ORS-shaped GPX with <rte>/<rtept> + per-point elevation. Pared
 # down to three points so the test stays readable but preserving the
@@ -58,7 +58,9 @@ class TestOrsRteToTrkGpx:
         seg = parsed.tracks[0].segments[0]
         # Coordinates round-trip exactly.
         assert [(p.latitude, p.longitude) for p in seg.points] == [
-            (49.0, 8.4), (49.01, 8.41), (49.02, 8.42),
+            (49.0, 8.4),
+            (49.01, 8.41),
+            (49.02, 8.42),
         ]
         # Elevation is preserved when present.
         assert [p.elevation for p in seg.points] == [120.0, 125.0, 130.0]
@@ -69,8 +71,7 @@ class TestOrsRteToTrkGpx:
 
     def test_empty_input_emits_empty_gpx(self):
         out = _ors_rte_to_trk_gpx(
-            '<?xml version="1.0"?><gpx version="1.1" '
-            'xmlns="http://www.topografix.com/GPX/1/1"></gpx>'
+            '<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"></gpx>'
         )
         assert "<rte>" not in out
         # No tracks emitted is fine — just no rtept on the wire.
@@ -89,12 +90,18 @@ class _FakeOrsClient:
     def directions(self, **kwargs):
         self.calls.append(kwargs)
         return {
-            "features": [{
-                "properties": {"summary": {
-                    "distance": 1234.5, "ascent": 67.8, "duration": 909,
-                }},
-                "geometry": {"coordinates": [[8.4, 49.0], [8.41, 49.01]]},
-            }]
+            "features": [
+                {
+                    "properties": {
+                        "summary": {
+                            "distance": 1234.5,
+                            "ascent": 67.8,
+                            "duration": 909,
+                        }
+                    },
+                    "geometry": {"coordinates": [[8.4, 49.0], [8.41, 49.01]]},
+                }
+            ]
         }
 
 
@@ -130,7 +137,9 @@ class TestPlanRouteConvertsBeforeReturning:
 
     def test_plan_route_output_is_track_format(self, routing_manager):
         result = routing_manager.plan_route(
-            start=(49.0, 8.4), end=(49.01, 8.41), sport="hike",
+            start=(49.0, 8.4),
+            end=(49.01, 8.41),
+            sport="hike",
         )
         gpx = result["gpx"]
         assert "<trk>" in gpx
@@ -141,7 +150,9 @@ class TestPlanRouteConvertsBeforeReturning:
     def test_raw_escape_hatch_returns_ors_xml(self, routing_manager):
         """Power-user toggle: ``_raw_ors_gpx=True`` skips conversion."""
         result = routing_manager.plan_route(
-            start=(49.0, 8.4), end=(49.01, 8.41), sport="hike",
+            start=(49.0, 8.4),
+            end=(49.01, 8.41),
+            sport="hike",
             _raw_ors_gpx=True,
         )
         assert "<rte>" in result["gpx"]

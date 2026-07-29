@@ -19,6 +19,7 @@ All API methods are coroutines. They wrap synchronous kompy calls in
 ``asyncio.to_thread`` so the event loop is never blocked by blocking
 HTTP. Rate limiting is awaited prior to each call.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,9 +45,7 @@ class KomootClient:
             email = self.auth.email
             password = self.auth.password
             if not email or not password:
-                raise KomootAPIError(
-                    "KOMOOT_EMAIL and KOMOOT_PASSWORD must be set"
-                )
+                raise KomootAPIError("KOMOOT_EMAIL and KOMOOT_PASSWORD must be set")
             self._api = kompy.KomootConnector(email, password)
         return self._api
 
@@ -57,18 +56,12 @@ class KomootClient:
         except Exception as e:
             msg = str(e)
             if "401" in msg or "403" in msg:
-                raise KomootAPIError(
-                    "Authentication failed. Check your credentials."
-                )
+                raise KomootAPIError("Authentication failed. Check your credentials.") from e
             if "429" in msg:
-                raise KomootAPIError(
-                    "Rate limited by Komoot. Try again later."
-                )
+                raise KomootAPIError("Rate limited by Komoot. Try again later.") from e
             if "404" in msg:
-                raise KomootAPIError(
-                    "Resource not found. Check the ID."
-                )
-            raise KomootAPIError(f"Komoot API error: {msg}")
+                raise KomootAPIError("Resource not found. Check the ID.") from e
+            raise KomootAPIError(f"Komoot API error: {msg}") from e
 
     async def get_user_profile(self):
         # KomootConnector.__init__ already performs the login HTTP call
@@ -146,10 +139,20 @@ class KomootClient:
         # Tour stores data in internal _create_* methods;
         # common attributes accessible directly
         for key in [
-            "id", "name", "sport", "status", "distance",
-            "elevation_up", "elevation_down", "duration", "date",
-            "start_point", "end_point", "difficulty_grade",
-            "difficulty_fitness", "difficulty_technical",
+            "id",
+            "name",
+            "sport",
+            "status",
+            "distance",
+            "elevation_up",
+            "elevation_down",
+            "duration",
+            "date",
+            "start_point",
+            "end_point",
+            "difficulty_grade",
+            "difficulty_fitness",
+            "difficulty_technical",
         ]:
             val = getattr(tour, key, None)
             if val is not None:
@@ -174,7 +177,8 @@ class KomootClient:
             # signature exactly. The call mutates ``tour.coordinates`` and
             # returns a bool; we return the populated list (or []).
             ok = await asyncio.to_thread(
-                tour.generate_coordinates, api.authentication,
+                tour.generate_coordinates,
+                api.authentication,
             )
             if not ok:
                 return []
@@ -196,13 +200,13 @@ class KomootClient:
         tour = await self._call(api.get_tour_by_id, str(tour_id))
         if isinstance(tour, kompy.Tour):
             await asyncio.to_thread(
-                tour.generate_gpx_track, api.authentication,
+                tour.generate_gpx_track,
+                api.authentication,
             )
             gpx_data = getattr(tour, "gpx_track", None)
             if gpx_data is None:
                 raise KomootAPIError("Failed to generate GPX")
-            gpx_str = gpx_data.to_xml() if hasattr(gpx_data, "to_xml") else str(gpx_data)
-            return gpx_str
+            return gpx_data.to_xml() if hasattr(gpx_data, "to_xml") else str(gpx_data)
         raise KomootAPIError("Could not retrieve tour as GPX")
 
     async def get_tour_directions(self, tour_id):
@@ -247,8 +251,7 @@ class KomootClient:
             summary = getattr(tour, "summary", None)
             if summary is None:
                 return []
-            return [self._way_type_to_dict(w)
-                    for w in (getattr(summary, "way_types", None) or [])]
+            return [self._way_type_to_dict(w) for w in (getattr(summary, "way_types", None) or [])]
         return []
 
     @staticmethod
@@ -341,18 +344,20 @@ class KomootClient:
                 # production — match the ``_way_type_to_dict`` precedent
                 # and prefer ``.type``, fall back for mocks.
                 name = self._surface_name(s)
-                events.append({
-                    "type": "surface",
-                    "description": f"{name if name is not None else '?'} "
-                                   f"({getattr(s, 'amount', 0)})",
-                })
+                events.append(
+                    {
+                        "type": "surface",
+                        "description": f"{name if name is not None else '?'} ({getattr(s, 'amount', 0)})",
+                    }
+                )
             for w in getattr(summary, "way_types", None) or []:
                 name = self._way_type_name(w)
-                events.append({
-                    "type": "way_type",
-                    "description": f"{name if name is not None else '?'} "
-                                   f"({getattr(w, 'amount', 0)})",
-                })
+                events.append(
+                    {
+                        "type": "way_type",
+                        "description": f"{name if name is not None else '?'} ({getattr(w, 'amount', 0)})",
+                    }
+                )
             return events
         return []
 
@@ -440,14 +445,12 @@ class KomootClient:
             if ext in ("gpx", "fit", "tcx"):
                 data_type = ext
             else:
-                raise KomootAPIError(
-                    f"Cannot determine tour type from extension: {ext}"
-                )
+                raise KomootAPIError(f"Cannot determine tour type from extension: {ext}")
 
         name = tour_name or os.path.splitext(os.path.basename(filepath))[0]
 
         if data_type == "gpx":
-            with open(filepath, "r") as f:
+            with open(filepath) as f:
                 tour_obj = gpxpy.parse(f)
             raw = await self._call(
                 api.upload_tour,
@@ -456,16 +459,15 @@ class KomootClient:
                 tour_name=name,
             )
             return self._normalize_upload_result(raw)
-        else:
-            with open(filepath, "rb") as f:
-                tour_obj = f.read()
-            raw = await self._call(
-                api.upload_tour,
-                tour_object=tour_obj,
-                activity_type=sport,
-                tour_name=name,
-            )
-            return self._normalize_upload_result(raw)
+        with open(filepath, "rb") as f:
+            tour_obj = f.read()
+        raw = await self._call(
+            api.upload_tour,
+            tour_object=tour_obj,
+            activity_type=sport,
+            tour_name=name,
+        )
+        return self._normalize_upload_result(raw)
 
     @staticmethod
     def _normalize_upload_result(raw):
@@ -601,7 +603,7 @@ class KomootClient:
         try:
             resp = await asyncio.to_thread(_post)
         except Exception as e:
-            raise KomootAPIError(f"Komoot upload transport error: {e}")
+            raise KomootAPIError(f"Komoot upload transport error: {e}") from e
 
         if resp.status_code in (201, 202):
             try:
@@ -677,16 +679,17 @@ class KomootClient:
 
         def _post():
             return requests.post(
-                url, auth=auth_pair, headers=headers, json=save_body,
+                url,
+                auth=auth_pair,
+                headers=headers,
+                json=save_body,
                 timeout=60,
             )
 
         try:
             resp = await asyncio.to_thread(_post)
         except Exception as e:
-            raise KomootAPIError(
-                f"Komoot save_planned_tour transport error: {e}"
-            )
+            raise KomootAPIError(f"Komoot save_planned_tour transport error: {e}") from e
 
         if resp.status_code in (200, 201):
             try:
@@ -698,8 +701,7 @@ class KomootClient:
 
         snippet = (resp.text or "")[:300]
         raise KomootAPIError(
-            f"Komoot rejected save_planned_tour (HTTP {resp.status_code}). "
-            f"Response body (first 300 chars): {snippet}"
+            f"Komoot rejected save_planned_tour (HTTP {resp.status_code}). Response body (first 300 chars): {snippet}"
         )
 
     async def modify_tour(self, tour_id, name=None, sport=None, status=None):
@@ -764,32 +766,32 @@ class KomootClient:
 
         def _do():
             return requests.get(
-                url, auth=auth_pair, headers=headers, params=params, timeout=30,
+                url,
+                auth=auth_pair,
+                headers=headers,
+                params=params,
+                timeout=30,
             )
 
         await self.rl.acquire()
         try:
             resp = await asyncio.to_thread(_do)
         except Exception as e:
-            raise KomootAPIError(f"Komoot transport error: {e}")
+            raise KomootAPIError(f"Komoot transport error: {e}") from e
 
         if resp.status_code == 200:
             try:
                 return resp.json()
             except ValueError as e:
-                raise KomootAPIError(f"Komoot returned non-JSON: {e}")
+                raise KomootAPIError(f"Komoot returned non-JSON: {e}") from e
         if resp.status_code in (401, 403):
-            raise KomootAPIError(
-                "Authentication failed. Check your credentials."
-            )
+            raise KomootAPIError("Authentication failed. Check your credentials.")
         if resp.status_code == 404:
             raise KomootAPIError("Resource not found. Check the ID.")
         if resp.status_code == 429:
             raise KomootAPIError("Rate limited by Komoot. Try again later.")
         snippet = (resp.text or "")[:200]
-        raise KomootAPIError(
-            f"Komoot API error: HTTP {resp.status_code} — {snippet}"
-        )
+        raise KomootAPIError(f"Komoot API error: HTTP {resp.status_code} — {snippet}")
 
     async def get_tour_full(self, tour_id):
         """Single-call full hydrate of a tour.
@@ -805,10 +807,7 @@ class KomootClient:
         """
         url = f"https://api.komoot.de/v007/tours/{int(tour_id)}"
         params = {
-            "_embedded": (
-                "coordinates,way_types,surfaces,directions,participants,"
-                "timeline,cover_images"
-            ),
+            "_embedded": ("coordinates,way_types,surfaces,directions,participants,timeline,cover_images"),
             "directions": "v2",
             "fields": "timeline",
             "format": "coordinate_array",
@@ -817,7 +816,10 @@ class KomootClient:
         return await self._http_get_json(url, params=params)
 
     async def get_highlight(
-        self, highlight_id, with_tips=False, with_recommenders=False,
+        self,
+        highlight_id,
+        with_tips=False,
+        with_recommenders=False,
     ):
         """Resolve a Komoot highlight (POI) by ID.
 
@@ -839,7 +841,8 @@ class KomootClient:
         if with_tips:
             try:
                 out["tips"] = await self._http_get_json(
-                    f"{base}/tips/", params={"page": 0},
+                    f"{base}/tips/",
+                    params={"page": 0},
                 )
             except KomootAPIError as e:
                 out["tips_error"] = str(e)
@@ -902,7 +905,12 @@ class KomootClient:
     # json`` stays as-is — Phase 2 callers continue to work unchanged.
 
     async def _http_request(
-        self, method, url, params=None, json_body=None, expect_json=True,
+        self,
+        method,
+        url,
+        params=None,
+        json_body=None,
+        expect_json=True,
         no_auth=False,
     ):
         """Authenticated HTTP request returning parsed JSON (or text).
@@ -925,29 +933,30 @@ class KomootClient:
 
         def _do():
             return requests.request(
-                method=method, url=url, params=params, json=json_body,
-                auth=auth_pair, headers=headers, timeout=30,
+                method=method,
+                url=url,
+                params=params,
+                json=json_body,
+                auth=auth_pair,
+                headers=headers,
+                timeout=30,
             )
 
         await self.rl.acquire()
         try:
             resp = await asyncio.to_thread(_do)
         except Exception as e:
-            raise KomootAPIError(f"Komoot transport error: {e}")
+            raise KomootAPIError(f"Komoot transport error: {e}") from e
 
         if not resp.ok:
             if resp.status_code in (401, 403):
-                raise KomootAPIError(
-                    "Authentication failed. Check your credentials."
-                )
+                raise KomootAPIError("Authentication failed. Check your credentials.")
             if resp.status_code == 404:
                 raise KomootAPIError(f"Not found: {url}")
             if resp.status_code == 429:
                 raise KomootAPIError("Rate limited by Komoot. Try again later.")
             snippet = (resp.text or "")[:200]
-            raise KomootAPIError(
-                f"Komoot API error: HTTP {resp.status_code} — {snippet}"
-            )
+            raise KomootAPIError(f"Komoot API error: HTTP {resp.status_code} — {snippet}")
 
         if not expect_json:
             return resp.text or ""
@@ -956,26 +965,38 @@ class KomootClient:
         try:
             return resp.json()
         except ValueError as e:
-            raise KomootAPIError(f"Komoot returned non-JSON ({url}): {e}")
+            raise KomootAPIError(f"Komoot returned non-JSON ({url}): {e}") from e
 
     async def _komoot_get(self, url, params=None, no_auth=False):
         return await self._http_request(
-            "GET", url, params=params, no_auth=no_auth,
+            "GET",
+            url,
+            params=params,
+            no_auth=no_auth,
         )
 
     async def _komoot_post(self, url, json_body=None, params=None):
         return await self._http_request(
-            "POST", url, params=params, json_body=json_body,
+            "POST",
+            url,
+            params=params,
+            json_body=json_body,
         )
 
     async def _komoot_patch(self, url, json_body=None, params=None):
         return await self._http_request(
-            "PATCH", url, params=params, json_body=json_body,
+            "PATCH",
+            url,
+            params=params,
+            json_body=json_body,
         )
 
     async def _komoot_delete(self, url, params=None):
         return await self._http_request(
-            "DELETE", url, params=params, expect_json=False,
+            "DELETE",
+            url,
+            params=params,
+            expect_json=False,
         )
 
     # --- Tour metadata (Phase 3) -----------------------------------
@@ -984,7 +1005,8 @@ class KomootClient:
         """``GET /v007/tours/{id}/cover_images/?page=N&limit=N``."""
         url = f"https://api.komoot.de/v007/tours/{int(tour_id)}/cover_images/"
         return await self._komoot_get(
-            url, params={"page": int(page), "limit": int(limit)},
+            url,
+            params={"page": int(page), "limit": int(limit)},
         )
 
     async def get_tour_line(self, tour_id):
@@ -995,16 +1017,16 @@ class KomootClient:
         404s). Response body shape: ``{tour_id, geometry: [{lat,lng,alt},
         ...], tourID, _links}``.
         """
-        url = (
-            f"https://www.komoot.com/api/v007/tours/{int(tour_id)}/tour_line"
-        )
+        url = f"https://www.komoot.com/api/v007/tours/{int(tour_id)}/tour_line"
         return await self._komoot_get(url)
 
     async def create_tour_share_link(self, tour_id):
         """``POST /v007/tours/{id}/share_token?format=v2&hl=en`` → 201."""
         url = f"https://api.komoot.de/v007/tours/{int(tour_id)}/share_token"
         return await self._komoot_post(
-            url, json_body={}, params={"format": "v2", "hl": "en"},
+            url,
+            json_body={},
+            params={"format": "v2", "hl": "en"},
         )
 
     async def revoke_tour_share_link(self, tour_id):
@@ -1013,8 +1035,14 @@ class KomootClient:
         return await self._komoot_delete(url)
 
     async def modify_tour_extended(
-        self, tour_id, description=None, gear=None, date=None,
-        status=None, name=None, sport=None,
+        self,
+        tour_id,
+        description=None,
+        gear=None,
+        date=None,
+        status=None,
+        name=None,
+        sport=None,
     ):
         """``PATCH /v007/tours/{id}`` — extended field coverage.
 
@@ -1043,23 +1071,20 @@ class KomootClient:
 
     async def get_highlight_images(self, highlight_id, page=0):
         """``GET /v007/highlights/{id}/images/?page=N``."""
-        url = (
-            f"https://api.komoot.de/v007/highlights/{int(highlight_id)}/images/"
-        )
+        url = f"https://api.komoot.de/v007/highlights/{int(highlight_id)}/images/"
         return await self._komoot_get(url, params={"page": int(page)})
 
     async def get_highlight_tips(self, highlight_id, page=0):
         """``GET /v007/highlights/{id}/tips/?page=N``."""
-        url = (
-            f"https://api.komoot.de/v007/highlights/{int(highlight_id)}/tips/"
-        )
+        url = f"https://api.komoot.de/v007/highlights/{int(highlight_id)}/tips/"
         return await self._komoot_get(url, params={"page": int(page)})
 
     async def list_user_highlights(self, user_id, page=0, limit=20):
         """``GET /v006/users/{user_id}/highlights/?page=N&limit=N``."""
         url = f"https://api.komoot.de/v006/users/{user_id}/highlights/"
         return await self._komoot_get(
-            url, params={"page": int(page), "limit": int(limit)},
+            url,
+            params={"page": int(page), "limit": int(limit)},
         )
 
     # --- Discover / Smart Tours (Phase 3) --------------------------
@@ -1073,9 +1098,7 @@ class KomootClient:
         standard HAL+JSON discover envelope with ``_embedded.items``.
         ``max_distance`` is forwarded in metres; Komoot may clamp it.
         """
-        url = (
-            "https://www.komoot.com/api/v007/discover_tours/from_location/"
-        )
+        url = "https://www.komoot.com/api/v007/discover_tours/from_location/"
         params = {
             "lat": float(lat),
             "lng": float(lng),
@@ -1085,7 +1108,11 @@ class KomootClient:
         return await self._komoot_get(url, params=params)
 
     async def smart_tour_for_highlight(
-        self, highlight_id, lat, lng, sport=None,
+        self,
+        highlight_id,
+        lat,
+        lng,
+        sport=None,
     ):
         """Smart tours that pass through a highlight.
 
@@ -1095,9 +1122,7 @@ class KomootClient:
         ``www.komoot.com/api/v007/discover_tours/from_location/?lat&lng&sport&highlight_id={id}``.
         Returns the standard discover HAL+JSON envelope.
         """
-        url = (
-            "https://www.komoot.com/api/v007/discover_tours/from_location/"
-        )
+        url = "https://www.komoot.com/api/v007/discover_tours/from_location/"
         params = {
             "lat": float(lat),
             "lng": float(lng),
@@ -1108,13 +1133,14 @@ class KomootClient:
         return await self._komoot_get(url, params=params)
 
     async def discover_with_attributes(
-        self, lat, lng, sport=None, attributes=None,
+        self,
+        lat,
+        lng,
+        sport=None,
+        attributes=None,
     ):
         """``GET /v007/discover_tours/from_location/route_attributes/``."""
-        url = (
-            "https://api.komoot.de/v007/discover_tours/"
-            "from_location/route_attributes/"
-        )
+        url = "https://api.komoot.de/v007/discover_tours/from_location/route_attributes/"
         params = {"lat": float(lat), "lng": float(lng)}
         if sport:
             params["sport"] = sport
@@ -1126,7 +1152,11 @@ class KomootClient:
         return await self._komoot_get(url, params=params)
 
     async def route_attribute_options(
-        self, lat, lng, sport, max_distance=20000,
+        self,
+        lat,
+        lng,
+        sport,
+        max_distance=20000,
     ):
         """Legal route-attribute names accepted by discovery.
 
@@ -1137,10 +1167,7 @@ class KomootClient:
         ``MissingServletRequestParameter``. Response shape:
         ``{route_attributes: [<name>, ...]}``.
         """
-        url = (
-            "https://www.komoot.com/api/v007/discover_tours/"
-            "route_attributes/"
-        )
+        url = "https://www.komoot.com/api/v007/discover_tours/route_attributes/"
         params = {
             "lat": float(lat),
             "lng": float(lng),
@@ -1158,10 +1185,7 @@ class KomootClient:
 
     async def get_collection_tours(self, collection_id, page=0):
         """``GET /v007/collections/{id}/compilation/``."""
-        url = (
-            f"https://api.komoot.de/v007/collections/"
-            f"{int(collection_id)}/compilation/"
-        )
+        url = f"https://api.komoot.de/v007/collections/{int(collection_id)}/compilation/"
         return await self._komoot_get(url, params={"page": int(page)})
 
     # --- Resolvers (Phase 3) ---------------------------------------
@@ -1176,13 +1200,11 @@ class KomootClient:
         the normal authenticated endpoint.
         """
         import re
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import parse_qs, urlparse
 
         m = re.search(r"/tour/(\d+)", share_url)
         if not m:
-            raise KomootAPIError(
-                f"Could not extract tour id from share URL: {share_url}"
-            )
+            raise KomootAPIError(f"Could not extract tour id from share URL: {share_url}")
         tour_id = m.group(1)
         parsed = urlparse(share_url)
         qs = parse_qs(parsed.query)
@@ -1196,4 +1218,3 @@ class KomootClient:
         else:
             data = await self._komoot_get(url, params=params)
         return {"tour_id": tour_id, "share_token": share_token, "tour": data}
-

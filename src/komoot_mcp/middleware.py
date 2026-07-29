@@ -25,6 +25,7 @@ Two concerns:
    it up per-request. If the header is absent (e.g. stdio mode), the
    env-var fallback in :mod:`komoot_mcp.context` kicks in.
 """
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,6 @@ from komoot_mcp.context import (
     set_auth_manager,
     set_ors_api_key,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -94,15 +94,9 @@ class InternalSecretMiddleware:
         provided = headers.get(INTERNAL_SECRET_HEADER)
 
         expected_direct = f"{BEARER_PREFIX}{secret}"
-        expected_gateway = (
-            f"{BEARER_PREFIX}Internal-gateway:{gateway_secret}"
-            if gateway_secret
-            else None
-        )
+        expected_gateway = f"{BEARER_PREFIX}Internal-gateway:{gateway_secret}" if gateway_secret else None
 
-        if provided == expected_direct:
-            pass
-        elif expected_gateway is not None and provided == expected_gateway:
+        if provided == expected_direct or (expected_gateway is not None and provided == expected_gateway):
             pass
         else:
             response = JSONResponse(

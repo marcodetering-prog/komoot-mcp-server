@@ -59,11 +59,7 @@ def register(mcp):
         # because kompy's bool-only return drops the new tour ID.
         if isinstance(result, dict) and result.get("id"):
             tid = result["id"]
-            return (
-                f"Tour uploaded successfully.\n"
-                f"  Tour ID: {tid}\n"
-                f"  URL: https://www.komoot.com/tour/{tid}"
-            )
+            return f"Tour uploaded successfully.\n  Tour ID: {tid}\n  URL: https://www.komoot.com/tour/{tid}"
         return "Tour uploaded successfully."
 
     @mcp.tool()
@@ -133,19 +129,26 @@ def register(mcp):
         """
         try:
             await get_client().modify_tour_extended(
-                tour_id, description=description, gear=gear, date=date,
-                status=status, name=name, sport=sport,
+                tour_id,
+                description=description,
+                gear=gear,
+                date=date,
+                status=status,
+                name=name,
+                sport=sport,
             )
         except Exception as e:
             return f"Error modifying tour: {e}"
         updated = [
-            label for label, val in [
-                ("description", description), ("gear", gear),
-                ("date", date), ("status", status),
-                ("name", name), ("sport", sport),
-            ] if val is not None
+            label
+            for label, val in [
+                ("description", description),
+                ("gear", gear),
+                ("date", date),
+                ("status", status),
+                ("name", name),
+                ("sport", sport),
+            ]
+            if val is not None
         ]
-        return (
-            f"Tour {tour_id} updated. "
-            f"Fields set: {', '.join(updated) if updated else 'none'}"
-        )
+        return f"Tour {tour_id} updated. Fields set: {', '.join(updated) if updated else 'none'}"

@@ -10,17 +10,16 @@ The fix adds ``gpx_content`` (preferred), keeps ``filepath`` for
 stdio / local-dev backward compat, and improves the error message when
 ``filepath`` is missing — hinting at ``gpx_content``.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import kompy  # the conftest stub
 import pytest
 
 from komoot_mcp.auth import AuthManager
-from komoot_mcp.client import KomootClient, KomootAPIError
+from komoot_mcp.client import KomootAPIError, KomootClient
 from komoot_mcp.context import clear_request_state
-
 
 GPX_SAMPLE = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
@@ -75,7 +74,8 @@ class TestUploadFromGpxContent:
     async def test_uploads_via_inline_gpx_content(self, client):
         captured = _install_mock_api(client)
         result = await client.upload_tour(
-            gpx_content=GPX_SAMPLE, sport="hike",
+            gpx_content=GPX_SAMPLE,
+            sport="hike",
         )
         # The mock returns what we gave it, so we know the call landed.
         assert result["id"] == 999
@@ -91,18 +91,15 @@ class TestUploadFromGpxContent:
 
     @pytest.mark.asyncio
     async def test_does_not_open_any_file_when_gpx_content_used(
-        self, client, monkeypatch,
+        self,
+        client,
+        monkeypatch,
     ):
         """Sentinel: prove no disk reads happen on the gpx_content path."""
         _install_mock_api(client)
 
-        real_open = open
-
         def guarded_open(path, mode="r", *args, **kwargs):
-            raise AssertionError(
-                f"gpx_content path must not touch disk; got "
-                f"open({path!r}, {mode!r})"
-            )
+            raise AssertionError(f"gpx_content path must not touch disk; got open({path!r}, {mode!r})")
 
         monkeypatch.setattr("builtins.open", guarded_open)
         # Should succeed without ever opening anything.
@@ -112,13 +109,16 @@ class TestUploadFromGpxContent:
     async def test_explicit_tour_name_wins(self, client):
         captured = _install_mock_api(client)
         await client.upload_tour(
-            gpx_content=GPX_SAMPLE, tour_name="my-custom-name",
+            gpx_content=GPX_SAMPLE,
+            tour_name="my-custom-name",
         )
         assert captured["tour_name"] == "my-custom-name"
 
     @pytest.mark.asyncio
     async def test_gpx_content_takes_precedence_over_filepath(
-        self, client, tmp_path,
+        self,
+        client,
+        tmp_path,
     ):
         """When both are provided, gpx_content wins. The filepath must
         not be touched — even if it doesn't exist."""
@@ -135,14 +135,16 @@ class TestUploadFromGpxContent:
 
     @pytest.mark.asyncio
     async def test_rejects_inline_content_for_non_gpx_data_type(
-        self, client,
+        self,
+        client,
     ):
         """FIT/TCX are binary — gpx_content (a string) can't carry them.
         The error message should make that clear."""
         _install_mock_api(client)
         with pytest.raises(KomootAPIError) as ei:
             await client.upload_tour(
-                gpx_content="not really fit bytes", data_type="fit",
+                gpx_content="not really fit bytes",
+                data_type="fit",
             )
         msg = str(ei.value)
         assert "gpx_content" in msg
@@ -159,7 +161,8 @@ class TestUploadFromFilepath:
         gpx_file.write_text(GPX_SAMPLE)
 
         result = await client.upload_tour(
-            filepath=str(gpx_file), sport="touringbicycle",
+            filepath=str(gpx_file),
+            sport="touringbicycle",
         )
         assert result["id"] == 999
         # Name derived from the filename (no track name on the parsed
@@ -177,7 +180,8 @@ class TestErrorMessages:
 
     @pytest.mark.asyncio
     async def test_neither_filepath_nor_content_raises_clear_error(
-        self, client,
+        self,
+        client,
     ):
         _install_mock_api(client)
         with pytest.raises(KomootAPIError) as ei:
@@ -206,8 +210,8 @@ class TestToolWrapper:
 
     @pytest.mark.asyncio
     async def test_tool_accepts_gpx_content(self, monkeypatch):
-        from komoot_mcp.tools import write_tools
         from komoot_mcp import context as ctx_mod
+        from komoot_mcp.tools import write_tools
 
         registered = {}
 
@@ -216,6 +220,7 @@ class TestToolWrapper:
                 def deco(fn):
                     registered[fn.__name__] = fn
                     return fn
+
                 return deco
 
         write_tools.register(_Mcp())
@@ -231,7 +236,9 @@ class TestToolWrapper:
         monkeypatch.setattr(ctx_mod, "get_client", lambda: _FakeClient())
 
         out = await registered["komoot_upload_tour"](
-            gpx_content=GPX_SAMPLE, sport="hike", tour_name="x",
+            gpx_content=GPX_SAMPLE,
+            sport="hike",
+            tour_name="x",
         )
         assert "Tour uploaded successfully" in out
         assert captured["gpx_content"] == GPX_SAMPLE
@@ -242,7 +249,8 @@ class TestToolWrapper:
 
     @pytest.mark.asyncio
     async def test_tool_surfaces_clear_error_when_nothing_provided(
-        self, monkeypatch,
+        self,
+        monkeypatch,
     ):
         from komoot_mcp.tools import write_tools
 
@@ -253,6 +261,7 @@ class TestToolWrapper:
                 def deco(fn):
                     registered[fn.__name__] = fn
                     return fn
+
                 return deco
 
         write_tools.register(_Mcp())

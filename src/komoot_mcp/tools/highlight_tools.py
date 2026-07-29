@@ -30,7 +30,8 @@ def _items(data):
 def register(mcp):
     @mcp.tool()
     async def komoot_get_highlight_images(
-        highlight_id: int, page: int = 0,
+        highlight_id: int,
+        page: int = 0,
     ) -> str:
         """Get photos attached to a Komoot highlight (POI).
 
@@ -43,7 +44,8 @@ def register(mcp):
         """
         try:
             data = await get_client().get_highlight_images(
-                highlight_id, page=page,
+                highlight_id,
+                page=page,
             )
         except Exception as e:
             return f"Error getting highlight images: {e}"
@@ -52,19 +54,13 @@ def register(mcp):
         if not items:
             return f"No images found for highlight {highlight_id}."
 
-        lines = [
-            f"Highlight {highlight_id} images (page {page}, {len(items)}):"
-        ]
+        lines = [f"Highlight {highlight_id} images (page {page}, {len(items)}):"]
         for it in items:
             if not isinstance(it, dict):
                 continue
             img_id = it.get("id", "?")
             src = it.get("src") or ""
-            resolved = (
-                src.replace("{width}", "800")
-                .replace("{height}", "600")
-                .replace("{crop}", "true")
-            )
+            resolved = src.replace("{width}", "800").replace("{height}", "600").replace("{crop}", "true")
             attr = it.get("attribution") or it.get("creator") or ""
             line = f"  [{img_id}] {resolved}"
             if attr:
@@ -74,7 +70,8 @@ def register(mcp):
 
     @mcp.tool()
     async def komoot_get_highlight_tips(
-        highlight_id: int, page: int = 0,
+        highlight_id: int,
+        page: int = 0,
     ) -> str:
         """Get community tips for a Komoot highlight.
 
@@ -90,7 +87,8 @@ def register(mcp):
         """
         try:
             data = await get_client().get_highlight_tips(
-                highlight_id, page=page,
+                highlight_id,
+                page=page,
             )
         except Exception as e:
             return f"Error getting highlight tips: {e}"
@@ -99,9 +97,7 @@ def register(mcp):
         if not items:
             return f"No tips found for highlight {highlight_id}."
 
-        lines = [
-            f"Highlight {highlight_id} tips (page {page}, {len(items)}):"
-        ]
+        lines = [f"Highlight {highlight_id} tips (page {page}, {len(items)}):"]
         for t in items[:20]:
             if not isinstance(t, dict):
                 continue
@@ -111,10 +107,8 @@ def register(mcp):
                 text = text[:197] + "..."
             creator = t.get("creator") or {}
             author = (
-                creator.get("display_name")
-                or creator.get("username")
-                or "?"
-            ) if isinstance(creator, dict) else "?"
+                (creator.get("display_name") or creator.get("username") or "?") if isinstance(creator, dict) else "?"
+            )
             lines.append(f"  [{tid}] {author}: {text}")
         if len(items) > 20:
             lines.append(f"  ... and {len(items) - 20} more tips")

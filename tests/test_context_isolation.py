@@ -4,9 +4,9 @@ These tests prove that two concurrent requests cannot see each other's
 AuthManager. If either fails, the server is unsafe for multi-tenant
 operation behind the platform gateway.
 """
+
 import asyncio
 import json
-import os
 
 import pytest
 
@@ -112,6 +112,7 @@ class TestUserCredentialsMiddleware:
             return {"type": "http.request", "body": b""}
 
         sent = []
+
         async def send(msg):
             sent.append(msg)
 
@@ -142,6 +143,7 @@ class TestUserCredentialsMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -169,6 +171,7 @@ class TestUserCredentialsMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -181,10 +184,13 @@ class TestInternalSecretMiddleware:
         monkeypatch.delenv("INTERNAL_SECRET", raising=False)
         # Re-import to pick up the env change.
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -195,6 +201,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -205,10 +212,13 @@ class TestInternalSecretMiddleware:
     async def test_rejects_when_secret_mismatch(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -220,8 +230,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -244,10 +256,13 @@ class TestInternalSecretMiddleware:
     async def test_rejects_when_header_missing(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -255,8 +270,10 @@ class TestInternalSecretMiddleware:
         scope = {"type": "http", "path": "/mcp", "headers": []}
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -270,10 +287,13 @@ class TestInternalSecretMiddleware:
         # to send the exact Authorization: Bearer <secret> form.
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -285,8 +305,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -298,10 +320,13 @@ class TestInternalSecretMiddleware:
     async def test_accepts_correct_bearer(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -316,6 +341,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -328,10 +354,13 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.setenv("GATEWAY_SECRET", "gw-shared-key")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -346,6 +375,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -358,10 +388,13 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.delenv("GATEWAY_SECRET", raising=False)
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -375,8 +408,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -390,10 +425,13 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.setenv("GATEWAY_SECRET", "gw-shared-key")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -408,6 +446,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -418,10 +457,13 @@ class TestInternalSecretMiddleware:
     async def test_health_bypasses_secret_check(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -432,6 +474,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 

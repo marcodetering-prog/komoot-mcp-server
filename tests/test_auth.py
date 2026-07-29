@@ -1,7 +1,11 @@
 """Tests for AuthManager."""
+
 import os
+
 import pytest
-from komoot_mcp.auth import AuthManager, AuthError
+
+from komoot_mcp.auth import AuthError, AuthManager
+
 
 class TestAuthManager:
     def test_init_reads_env_vars(self):
