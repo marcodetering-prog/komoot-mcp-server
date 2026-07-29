@@ -9,6 +9,7 @@ Tests exercise the *tool* layer (not just the client) because that's
 where the LLM-friendly rendering lives — and where docstring contracts
 ("returns a bullet list", "logs the URL on 404") become user-visible.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -67,6 +68,7 @@ def registered_tools():
             def decorator(fn):
                 registry[fn.__name__] = fn
                 return fn
+
             return decorator
 
     from komoot_mcp.tools import (
@@ -77,6 +79,7 @@ def registered_tools():
         share_tools,
         write_tools,
     )
+
     browse_tools.register(_Mcp())
     write_tools.register(_Mcp())
     highlight_tools.register(_Mcp())
@@ -120,17 +123,20 @@ def _stub_kompy_auth(client):
 # Tour metadata tools (5)
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_tour_photos(registered_tools, auth_token):
     body = {
-        "_embedded": {"items": [
-            {"id": 1, "src": "https://img.komoot.de/x/{width}/{height}/{crop}",
-             "rating": 4.7},
-            {"id": 2, "src": "https://img.komoot.de/y/{width}/{height}/{crop}"},
-        ]}
+        "_embedded": {
+            "items": [
+                {"id": 1, "src": "https://img.komoot.de/x/{width}/{height}/{crop}", "rating": 4.7},
+                {"id": 2, "src": "https://img.komoot.de/y/{width}/{height}/{crop}"},
+            ]
+        }
     }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_tour_photos"](tour_id=42)
     assert "Tour 42 photos" in out
@@ -153,6 +159,7 @@ async def test_get_tour_line(registered_tools, auth_token):
     }
     with _patch_request(json_body=body) as mock_req:
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_tour_line"](tour_id=42)
     # Confirm we hit the corrected URL on www.komoot.com (not
@@ -169,6 +176,7 @@ async def test_create_share_link(registered_tools, auth_token):
     body = {"token": "abc123"}
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_create_share_link"](tour_id=42)
     assert "Token: abc123" in out
@@ -182,6 +190,7 @@ async def test_revoke_share_link(registered_tools, auth_token):
     resp = _make_response(status=204, text="")
     with patch("komoot_mcp.client.requests.request", return_value=resp):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_revoke_share_link"](tour_id=42)
     assert "revoked" in out.lower()
@@ -192,9 +201,12 @@ async def test_modify_tour_extended(registered_tools, auth_token):
     body = {"id": 42, "name": "new", "description": "d"}
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_modify_tour_extended"](
-            tour_id=42, name="new", description="d",
+            tour_id=42,
+            name="new",
+            description="d",
         )
     assert "updated" in out
     assert "name" in out
@@ -205,14 +217,19 @@ async def test_modify_tour_extended(registered_tools, auth_token):
 # Highlight tools (3)
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_highlight_images(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 11, "src": "https://img.komoot.de/h/{width}/{height}/{crop}",
-         "attribution": "Anna"},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 11, "src": "https://img.komoot.de/h/{width}/{height}/{crop}", "attribution": "Anna"},
+            ]
+        }
+    }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_highlight_images"](
             highlight_id=99,
@@ -224,12 +241,16 @@ async def test_get_highlight_images(registered_tools, auth_token):
 
 @pytest.mark.asyncio
 async def test_get_highlight_tips(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 5, "text": "Bring water!",
-         "creator": {"display_name": "Bob"}},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 5, "text": "Bring water!", "creator": {"display_name": "Bob"}},
+            ]
+        }
+    }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_highlight_tips"](
             highlight_id=99,
@@ -240,12 +261,16 @@ async def test_get_highlight_tips(registered_tools, auth_token):
 
 @pytest.mark.asyncio
 async def test_list_user_highlights(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 7, "name": "Marienplatz", "sports": "hike",
-         "category": "viewpoint"},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 7, "name": "Marienplatz", "sports": "hike", "category": "viewpoint"},
+            ]
+        }
+    }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_list_user_highlights"](
             user_id="123",
@@ -258,17 +283,24 @@ async def test_list_user_highlights(registered_tools, auth_token):
 # Discover / smart tour tools (5)
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_smart_tours_near(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 100, "name": "Alps Loop", "sport": "mountainbike",
-         "distance": 25000, "elevation_up": 1200},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 100, "name": "Alps Loop", "sport": "mountainbike", "distance": 25000, "elevation_up": 1200},
+            ]
+        }
+    }
     with _patch_request(json_body=body) as mock_req:
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_smart_tours_near"](
-            lat=47.0, lng=11.0, sport="mountainbike",
+            lat=47.0,
+            lng=11.0,
+            sport="mountainbike",
         )
     # Confirm we hit the corrected from_location URL.
     called_url = mock_req.call_args.kwargs.get("url")
@@ -283,15 +315,22 @@ async def test_smart_tours_near(registered_tools, auth_token):
 
 @pytest.mark.asyncio
 async def test_smart_tour_for_highlight(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 200, "name": "Round trip", "sport": "hike",
-         "distance": 8000},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 200, "name": "Round trip", "sport": "hike", "distance": 8000},
+            ]
+        }
+    }
     with _patch_request(json_body=body) as mock_req:
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_smart_tour_for_highlight"](
-            highlight_id=99, lat=47.0, lng=11.0, sport="hike",
+            highlight_id=99,
+            lat=47.0,
+            lng=11.0,
+            sport="hike",
         )
     # Confirm we hit the corrected from_location URL with
     # highlight_id as a query param (no for_highlight path exists).
@@ -305,15 +344,21 @@ async def test_smart_tour_for_highlight(registered_tools, auth_token):
 
 @pytest.mark.asyncio
 async def test_discover_with_attributes(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"id": 400, "name": "Scenic ridge", "sport": "hike",
-         "distance": 12000},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {"id": 400, "name": "Scenic ridge", "sport": "hike", "distance": 12000},
+            ]
+        }
+    }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_discover_with_attributes"](
-            lat=47.0, lng=11.0, attributes="scenic",
+            lat=47.0,
+            lng=11.0,
+            attributes="scenic",
         )
     assert "Scenic ridge" in out
     assert "scenic" in out
@@ -326,9 +371,12 @@ async def test_route_attribute_options(registered_tools, auth_token):
     body = {"route_attributes": ["waterfalls", "lakes_rivers", "cafe"]}
     with _patch_request(json_body=body) as mock_req:
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_route_attribute_options"](
-            lat=47.9959, lng=7.8522, sport="mountainbike",
+            lat=47.9959,
+            lng=7.8522,
+            sport="mountainbike",
         )
     params = mock_req.call_args.kwargs.get("params") or {}
     # All four required by the Komoot endpoint — missing any returns 400.
@@ -344,16 +392,20 @@ async def test_route_attribute_options(registered_tools, auth_token):
 # Collection tools (3)
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_collection(registered_tools, auth_token):
     body = {
-        "id": 500, "name": "Best gravel rides", "sport": "touringbicycle",
+        "id": 500,
+        "name": "Best gravel rides",
+        "sport": "touringbicycle",
         "number_of_tours": 12,
         "creator": {"display_name": "Lena"},
         "description": "Curated mix of rolling backroads",
     }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_collection"](
             collection_id=500,
@@ -365,14 +417,25 @@ async def test_get_collection(registered_tools, auth_token):
 
 @pytest.mark.asyncio
 async def test_get_collection_tours(registered_tools, auth_token):
-    body = {"_embedded": {"items": [
-        {"_embedded": {"tour": {
-            "id": 11, "name": "Saturday loop", "sport": "racebike",
-            "distance": 60000,
-        }}},
-    ]}}
+    body = {
+        "_embedded": {
+            "items": [
+                {
+                    "_embedded": {
+                        "tour": {
+                            "id": 11,
+                            "name": "Saturday loop",
+                            "sport": "racebike",
+                            "distance": 60000,
+                        }
+                    }
+                },
+            ]
+        }
+    }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_collection_tours"](
             collection_id=500,
@@ -385,15 +448,21 @@ async def test_get_collection_tours(registered_tools, auth_token):
 # Resolvers (1)
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_resolve_share_url(registered_tools, auth_token):
     body = {
-        "id": 12345, "name": "Shared loop", "sport": "hike",
-        "distance": 9500, "elevation_up": 300,
-        "status": "public", "date": "2026-05-01T10:00:00Z",
+        "id": 12345,
+        "name": "Shared loop",
+        "sport": "hike",
+        "distance": 9500,
+        "elevation_up": 300,
+        "status": "public",
+        "date": "2026-05-01T10:00:00Z",
     }
     with _patch_request(json_body=body):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_resolve_share_url"](
             share_url="https://www.komoot.com/tour/12345?share_token=abc",
@@ -407,19 +476,23 @@ async def test_resolve_share_url(registered_tools, auth_token):
 # Error path + client unit checks
 # ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_tools_render_errors_not_exceptions(
-    registered_tools, auth_token,
+    registered_tools,
+    auth_token,
 ):
     """If Komoot returns 500, the tool layer renders an error string."""
     resp = _make_response(status=500, text="boom")
     with patch("komoot_mcp.client.requests.request", return_value=resp):
         from komoot_mcp.context import get_client
+
         _stub_kompy_auth(get_client())
         out = await registered_tools["komoot_get_tour_line"](tour_id=42)
         assert "Error" in out
         out2 = await registered_tools["komoot_modify_tour_extended"](
-            tour_id=42, name="x",
+            tour_id=42,
+            name="x",
         )
         assert "Error" in out2
 
@@ -429,6 +502,7 @@ async def test_client_modify_tour_extended_empty_body_raises(auth_token):
     """No fields → KomootAPIError so callers don't accidentally PATCH nothing."""
     from komoot_mcp.client import KomootAPIError
     from komoot_mcp.context import get_client
+
     client = get_client()
     _stub_kompy_auth(client)
     client.rl = _NoLimit()

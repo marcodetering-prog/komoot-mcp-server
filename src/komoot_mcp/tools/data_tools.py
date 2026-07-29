@@ -41,7 +41,7 @@ def register(mcp):
                 if isinstance(c, dict):
                     lines.append(f"  [{i}] lat={c.get('lat')}, lng={c.get('lng')}, alt={c.get('alt', '?')}")
                 elif isinstance(c, (list, tuple)) and len(c) >= 2:
-                    alt = c[2] if len(c) >= 3 else '?'
+                    alt = c[2] if len(c) >= 3 else "?"
                     lines.append(f"  [{i}] lat={c[0]}, lng={c[1]}, alt={alt}")
             if len(coords) > 5:
                 lines.append(f"  ... and {len(coords) - 5} more points")

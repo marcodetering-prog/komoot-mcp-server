@@ -102,6 +102,7 @@ def _run_http(mcp: FastMCP) -> None:
 def main():
     """Entry point for the MCP server."""
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--transport", default="stdio", choices=["stdio", "http"])
     parser.add_argument("--port", type=int, default=int(os.environ.get("MCP_PORT", "3007")))

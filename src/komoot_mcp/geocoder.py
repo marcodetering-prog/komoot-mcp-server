@@ -7,6 +7,7 @@ import urllib.request
 class GeocoderError(Exception):
     pass
 
+
 class Geocoder:
     def __init__(self):
         self._last_call = 0.0
@@ -33,15 +34,17 @@ class Geocoder:
         for feat in data.get("features", []):
             props = feat.get("properties", {})
             coords = feat.get("geometry", {}).get("coordinates", [])
-            results.append({
-                "display_name": props.get("name", ""),
-                "lat": coords[1] if len(coords) >= 2 else None,
-                "lon": coords[0] if len(coords) >= 1 else None,
-                "type": props.get("type", ""),
-                "city": props.get("city", props.get("name", "")),
-                "country": props.get("country", ""),
-                "osm_id": props.get("osm_id", ""),
-            })
+            results.append(
+                {
+                    "display_name": props.get("name", ""),
+                    "lat": coords[1] if len(coords) >= 2 else None,
+                    "lon": coords[0] if len(coords) >= 1 else None,
+                    "type": props.get("type", ""),
+                    "city": props.get("city", props.get("name", "")),
+                    "country": props.get("country", ""),
+                    "osm_id": props.get("osm_id", ""),
+                }
+            )
         return results
 
     def reverse(self, lat: float, lon: float) -> dict:

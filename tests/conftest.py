@@ -4,6 +4,7 @@ Installs a lightweight kompy stub before any project module is imported,
 so test environments without the real kompy package can still load
 ``komoot_mcp.client`` and friends.
 """
+
 import os
 import sys
 from types import ModuleType
@@ -14,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 def _install_kompy_stub_if_missing() -> None:
     try:
         import kompy  # noqa: F401
+
         return
     except ModuleNotFoundError:
         pass
@@ -85,6 +87,7 @@ def _install_openrouteservice_stub_if_missing() -> None:
     """
     try:
         import openrouteservice  # noqa: F401
+
         return
     except ModuleNotFoundError:
         pass

@@ -14,6 +14,7 @@ The fix is two-fold:
   when available, and a plain success line otherwise — never the raw
   bool.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -76,7 +77,8 @@ class TestClientRaisesOnFalseReturn:
         _install_failing_upload(client)
         with pytest.raises(KomootAPIError) as ei:
             await client.upload_tour(
-                gpx_content=GPX_SAMPLE, sport="hike",
+                gpx_content=GPX_SAMPLE,
+                sport="hike",
             )
         msg = str(ei.value).lower()
         # Must NOT silently coerce False into "successfully" language.
@@ -90,14 +92,16 @@ class TestClientRaisesOnFalseReturn:
         client._api = api
         with pytest.raises(KomootAPIError):
             await client.upload_tour(
-                gpx_content=GPX_SAMPLE, sport="hike",
+                gpx_content=GPX_SAMPLE,
+                sport="hike",
             )
 
     @pytest.mark.asyncio
     async def test_true_kompy_return_becomes_normalized_dict(self, client):
         _install_succeeding_upload_bool(client)
         out = await client.upload_tour(
-            gpx_content=GPX_SAMPLE, sport="hike",
+            gpx_content=GPX_SAMPLE,
+            sport="hike",
         )
         assert out == {"id": None, "status": "uploaded"}
 
@@ -116,16 +120,14 @@ class TestUploadToolSurfacesFailureCleanly:
                 def deco(fn):
                     registered[fn.__name__] = fn
                     return fn
+
                 return deco
 
         write_tools.register(_Mcp())
 
         class _FakeClient:
             async def upload_tour(self, **kwargs):
-                raise KomootAPIError(
-                    "Komoot rejected the upload (HTTP 400) — GPX is "
-                    "probably in route format."
-                )
+                raise KomootAPIError("Komoot rejected the upload (HTTP 400) — GPX is probably in route format.")
 
         monkeypatch.setattr(write_tools, "get_client", lambda: _FakeClient())
 
@@ -150,6 +152,7 @@ class TestUploadToolSurfacesFailureCleanly:
                 def deco(fn):
                     registered[fn.__name__] = fn
                     return fn
+
                 return deco
 
         write_tools.register(_Mcp())

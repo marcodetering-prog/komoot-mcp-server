@@ -11,6 +11,7 @@ For stdio/local-dev mode (no middleware), the helpers below fall back
 to env vars and a process-wide ``RateLimiter`` so behaviour is
 unchanged for single-user setups.
 """
+
 from __future__ import annotations
 
 import os
@@ -28,18 +29,12 @@ from komoot_mcp.rate_limiter import RateLimiter
 
 # Per-request state. Tools must NEVER look at module globals — always
 # resolve through ``get_*`` helpers so multi-tenant isolation holds.
-_auth_var: ContextVar[AuthManager | None] = ContextVar(
-    "komoot_auth_manager", default=None
-)
-_client_var: ContextVar[KomootClient | None] = ContextVar(
-    "komoot_client", default=None
-)
+_auth_var: ContextVar[AuthManager | None] = ContextVar("komoot_auth_manager", default=None)
+_client_var: ContextVar[KomootClient | None] = ContextVar("komoot_client", default=None)
 # OpenRouteService API key — per-org credential plumbed via x-user-credentials.
 # Tools that hit ORS (currently komoot_plan_route) MUST read through
 # ``get_ors_api_key`` so two concurrent tenants never share a key.
-_ors_api_key_var: ContextVar[str | None] = ContextVar(
-    "komoot_ors_api_key", default=None
-)
+_ors_api_key_var: ContextVar[str | None] = ContextVar("komoot_ors_api_key", default=None)
 
 
 # Shared singletons that don't carry tenant identity. Rate limiting is

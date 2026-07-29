@@ -4,6 +4,7 @@ These tests prove that two concurrent requests cannot see each other's
 AuthManager. If either fails, the server is unsafe for multi-tenant
 operation behind the platform gateway.
 """
+
 import asyncio
 import json
 
@@ -111,6 +112,7 @@ class TestUserCredentialsMiddleware:
             return {"type": "http.request", "body": b""}
 
         sent = []
+
         async def send(msg):
             sent.append(msg)
 
@@ -141,6 +143,7 @@ class TestUserCredentialsMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -168,6 +171,7 @@ class TestUserCredentialsMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -182,9 +186,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -195,6 +201,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -207,9 +214,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -221,8 +230,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -247,9 +258,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -257,8 +270,10 @@ class TestInternalSecretMiddleware:
         scope = {"type": "http", "path": "/mcp", "headers": []}
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -274,9 +289,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -288,8 +305,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -303,9 +322,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -320,6 +341,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -334,9 +356,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -351,6 +375,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -365,9 +390,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
 
@@ -381,8 +408,10 @@ class TestInternalSecretMiddleware:
         }
 
         captured: list[dict] = []
+
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             captured.append(msg)
 
@@ -398,9 +427,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -415,6 +446,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 
@@ -427,9 +459,11 @@ class TestInternalSecretMiddleware:
         import importlib
 
         import komoot_mcp.middleware as mod
+
         importlib.reload(mod)
 
         called = []
+
         async def downstream(scope, receive, send):
             called.append(True)
             await send({"type": "http.response.start", "status": 200, "headers": []})
@@ -440,6 +474,7 @@ class TestInternalSecretMiddleware:
 
         async def receive():
             return {"type": "http.request", "body": b""}
+
         async def send(msg):
             pass
 

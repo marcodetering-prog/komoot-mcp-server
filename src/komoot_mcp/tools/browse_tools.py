@@ -27,8 +27,12 @@ def register(mcp):
         """
         try:
             result = await get_client().list_tours(
-                page=page, limit=limit, sport_type=sport_type,
-                status=status, name=name, sort_field=sort_field,
+                page=page,
+                limit=limit,
+                sport_type=sport_type,
+                status=status,
+                name=name,
+                sort_field=sort_field,
                 sort_direction=sort_direction,
             )
             tours = result.get("tours", [])
@@ -36,13 +40,11 @@ def register(mcp):
                 return "No tours found."
             lines = [f"Tours (page {page}, {len(tours)} results):"]
             for t in tours:
-                dist = t.get('distance', '?')
-                elev = t.get('elevation_up', '?')
-                sport = t.get('sport', '?')
-                status_str = t.get('status', '?')
-                lines.append(
-                    f"  [{t['id']}] {t.get('name', 'unnamed')} | {sport} | {status_str} | {dist}m | +{elev}m"
-                )
+                dist = t.get("distance", "?")
+                elev = t.get("elevation_up", "?")
+                sport = t.get("sport", "?")
+                status_str = t.get("status", "?")
+                lines.append(f"  [{t['id']}] {t.get('name', 'unnamed')} | {sport} | {status_str} | {dist}m | +{elev}m")
             return "\n".join(lines)
         except Exception as e:
             return f"Error listing tours: {e}"
@@ -58,9 +60,17 @@ def register(mcp):
             tour = await get_client().get_tour(tour_id)
             lines = [f"Tour: {tour.get('name', 'unnamed')}"]
             for key in [
-                'id', 'sport', 'status', 'distance', 'elevation_up', 'elevation_down',
-                'duration', 'date', 'difficulty_grade', 'difficulty_fitness',
-                'difficulty_technical'
+                "id",
+                "sport",
+                "status",
+                "distance",
+                "elevation_up",
+                "elevation_down",
+                "duration",
+                "date",
+                "difficulty_grade",
+                "difficulty_fitness",
+                "difficulty_technical",
             ]:
                 val = tour.get(key)
                 if val is not None:
@@ -116,17 +126,14 @@ def register(mcp):
             f"  Difficulty grade: {diff_grade}",
         ]
         if sp_lat is not None and sp_lng is not None:
-            lines.append(
-                f"  Start: lat={sp_lat}, lng={sp_lng}, alt={sp_alt}"
-            )
+            lines.append(f"  Start: lat={sp_lat}, lng={sp_lng}, alt={sp_alt}")
 
         # ---- embedded coordinates ----
         coords = embedded.get("coordinates") or {}
         coord_items = coords.get("items") if isinstance(coords, dict) else None
         if isinstance(coord_items, list):
             lines.append(
-                f"  Coordinates: {len(coord_items)} points available "
-                "(use komoot_get_tour_coordinates for full array)"
+                f"  Coordinates: {len(coord_items)} points available (use komoot_get_tour_coordinates for full array)"
             )
 
         # ---- embedded way_types ----
@@ -177,10 +184,7 @@ def register(mcp):
         directions = embedded.get("directions") or {}
         dir_items = directions.get("items") if isinstance(directions, dict) else None
         if isinstance(dir_items, list):
-            lines.append(
-                f"  Directions: {len(dir_items)} steps "
-                "(use komoot_get_tour_directions for full list)"
-            )
+            lines.append(f"  Directions: {len(dir_items)} steps (use komoot_get_tour_directions for full list)")
 
         # ---- embedded timeline (highlights) ----
         timeline = embedded.get("timeline") or {}
@@ -210,9 +214,7 @@ def register(mcp):
                     lines.append(f"    highlight {hid}: {hname}")
                     shown += 1
             if shown < len(tl_items):
-                lines.append(
-                    "    (use komoot_get_highlight on any id for details)"
-                )
+                lines.append("    (use komoot_get_highlight on any id for details)")
 
         # ---- embedded cover images ----
         cover = embedded.get("cover_images") or {}
@@ -344,11 +346,7 @@ def register(mcp):
         # us — render whatever forecast-like collection we find. Common
         # shapes seen in the wild: top-level ``forecast``, ``items``,
         # or a HAL ``_embedded.items``.
-        forecast = (
-            data.get("forecast")
-            or data.get("items")
-            or (data.get("_embedded") or {}).get("items")
-        )
+        forecast = data.get("forecast") or data.get("items") or (data.get("_embedded") or {}).get("items")
         lines = [f"Weather forecast for tour {tour_id}:"]
         if isinstance(forecast, list) and forecast:
             for entry in forecast[:8]:
@@ -395,7 +393,9 @@ def register(mcp):
 
     @mcp.tool()
     async def komoot_get_tour_photos(
-        tour_id: int, page: int = 0, limit: int = 5,
+        tour_id: int,
+        page: int = 0,
+        limit: int = 5,
     ) -> str:
         """Get the cover/photo images attached to a tour.
 
@@ -412,7 +412,9 @@ def register(mcp):
         """
         try:
             data = await get_client().get_tour_photos(
-                tour_id, page=page, limit=limit,
+                tour_id,
+                page=page,
+                limit=limit,
             )
         except Exception as e:
             return f"Error getting tour photos: {e}"
@@ -430,11 +432,7 @@ def register(mcp):
             # Komoot returns templated URLs like
             # ``https://...?width={width}&height={height}&crop={crop}``.
             # Render at 800 wide so callers get a usable preview URL.
-            resolved = (
-                src.replace("{width}", "800")
-                .replace("{height}", "600")
-                .replace("{crop}", "true")
-            )
+            resolved = src.replace("{width}", "800").replace("{height}", "600").replace("{crop}", "true")
             rating = it.get("rating")
             line = f"  [{img_id}] {resolved}"
             if rating is not None:
@@ -479,10 +477,7 @@ def register(mcp):
         lines = [f"Tour {tour_id} line: {len(coords)} points"]
         for i, c in enumerate(coords[:5]):
             if isinstance(c, dict):
-                lines.append(
-                    f"  [{i}] lat={c.get('lat')}, lng={c.get('lng')}, "
-                    f"alt={c.get('alt', '?')}"
-                )
+                lines.append(f"  [{i}] lat={c.get('lat')}, lng={c.get('lng')}, alt={c.get('alt', '?')}")
             elif isinstance(c, (list, tuple)) and len(c) >= 2:
                 alt = c[2] if len(c) >= 3 else "?"
                 lines.append(f"  [{i}] lat={c[0]}, lng={c[1]}, alt={alt}")
@@ -492,7 +487,9 @@ def register(mcp):
 
     @mcp.tool()
     async def komoot_list_user_highlights(
-        user_id: str, page: int = 0, limit: int = 20,
+        user_id: str,
+        page: int = 0,
+        limit: int = 20,
     ) -> str:
         """List a user's saved highlights (POIs).
 
@@ -506,7 +503,9 @@ def register(mcp):
         """
         try:
             data = await get_client().list_user_highlights(
-                user_id, page=page, limit=limit,
+                user_id,
+                page=page,
+                limit=limit,
             )
         except Exception as e:
             return f"Error listing user highlights: {e}"
@@ -514,9 +513,7 @@ def register(mcp):
         items = _hal_items(data)
         if not items:
             return f"No highlights found for user {user_id}."
-        lines = [
-            f"Highlights for user {user_id} (page {page}, {len(items)} items):"
-        ]
+        lines = [f"Highlights for user {user_id} (page {page}, {len(items)} items):"]
         for h in items:
             if not isinstance(h, dict):
                 continue

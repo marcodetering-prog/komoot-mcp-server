@@ -45,13 +45,16 @@ def _ors_rte_to_trk_gpx(ors_xml: str, name: str = "Planned route") -> str:
         seg = gpxpy.gpx.GPXTrackSegment()
         track.segments.append(seg)
         for pt in rte.points:
-            seg.points.append(gpxpy.gpx.GPXTrackPoint(
-                latitude=pt.latitude,
-                longitude=pt.longitude,
-                elevation=pt.elevation,
-            ))
+            seg.points.append(
+                gpxpy.gpx.GPXTrackPoint(
+                    latitude=pt.latitude,
+                    longitude=pt.longitude,
+                    elevation=pt.elevation,
+                )
+            )
 
     return out.to_xml()
+
 
 SPORT_PROFILES = {
     "hike": "foot-hiking",
@@ -146,10 +149,7 @@ class KomootNativePlanner:
                 "(start + end). For a roundtrip pass the same point "
                 "twice."
             )
-        path = [
-            {"location": {"lat": float(lat), "lng": float(lon)}}
-            for lat, lon in waypoints
-        ]
+        path = [{"location": {"lat": float(lat), "lng": float(lon)}} for lat, lon in waypoints]
         body = {
             "constitution": int(constitution),
             "sport": sport_komoot,
@@ -159,9 +159,7 @@ class KomootNativePlanner:
             # importing manually-drawn geometry, so each segment's
             # ``geometry`` stays empty and Komoot fills it in via its
             # own routing engine.
-            "segments": [
-                {"geometry": [], "type": "Routed"} for _ in range(len(path) - 1)
-            ],
+            "segments": [{"geometry": [], "type": "Routed"} for _ in range(len(path) - 1)],
         }
         params = {"sport": sport_komoot, "_embedded": self._EMBED}
         try:
@@ -183,14 +181,12 @@ class KomootNativePlanner:
 
         if resp.status_code != 200:
             snippet = (resp.text or "")[:400]
-            raise RoutingError(
-                f"Komoot planner request failed "
-                f"(HTTP {resp.status_code}): {snippet}"
-            )
+            raise RoutingError(f"Komoot planner request failed (HTTP {resp.status_code}): {snippet}")
         try:
             return resp.json()
         except ValueError as e:
             raise RoutingError(f"Komoot planner returned non-JSON: {e}") from e
+
 
 # ORS only allows specific avoid_features values per profile family. Sending
 # the wrong one (e.g. "highways" on cycling-mountain) causes a request-wide
@@ -277,9 +273,7 @@ class RoutingManager:
             body["radiuses"] = radiuses
         body["elevation"] = True
 
-        url = (
-            f"{self.client._base_url}/v2/directions/{profile}/gpx"
-        )
+        url = f"{self.client._base_url}/v2/directions/{profile}/gpx"
         headers = {
             "Authorization": self._key,
             "Content-Type": "application/json",
@@ -304,10 +298,7 @@ class RoutingManager:
                 err = resp.json()
             except ValueError:
                 err = resp.text[:500]
-            raise RoutingError(
-                f"OpenRouteService GPX request failed "
-                f"(status {resp.status_code}): {err}"
-            )
+            raise RoutingError(f"OpenRouteService GPX request failed (status {resp.status_code}): {err}")
         return resp.text
 
     def _build_options(self, profile, prefer_trails, avoid_roads):
@@ -339,9 +330,18 @@ class RoutingManager:
             options["avoid_features"] = avoid_features
         return options or None
 
-    def plan_route(self, start, end=None, roundtrip=False, target_distance_km=None,
-                   sport="hike", prefer_trails=False, avoid_roads=False, waypoints=None,
-                   _raw_ors_gpx=False):
+    def plan_route(
+        self,
+        start,
+        end=None,
+        roundtrip=False,
+        target_distance_km=None,
+        sport="hike",
+        prefer_trails=False,
+        avoid_roads=False,
+        waypoints=None,
+        _raw_ors_gpx=False,
+    ):
         profile = SPORT_PROFILES.get(sport)
         if not profile:
             raise RoutingError(f"Unknown sport: {sport}. Valid: {list(SPORT_PROFILES.keys())}")
@@ -351,11 +351,7 @@ class RoutingManager:
                 raise RoutingError("target_distance_km is required for roundtrip routing")
             coords = [_to_lon_lat(start)]
             options = self._build_options(profile, prefer_trails, avoid_roads) or {}
-            options["round_trip"] = {
-                "length": int(target_distance_km * 1000),
-                "points": 3,
-                "seed": 42
-            }
+            options["round_trip"] = {"length": int(target_distance_km * 1000), "points": 3, "seed": 42}
         else:
             if not end:
                 raise RoutingError("end point is required for point-to-point routing")
@@ -415,15 +411,14 @@ class RoutingManager:
         else:
             try:
                 gpx_result = _ors_rte_to_trk_gpx(
-                    ors_gpx, name=f"Planned {sport} route",
+                    ors_gpx,
+                    name=f"Planned {sport} route",
                 )
             except Exception as e:
                 # Don't fail the whole plan if conversion blows up —
                 # surface the raw ORS body so the caller has *something*
                 # to work with, plus a clear hint in the error.
-                raise RoutingError(
-                    f"ORS route planned but GPX format conversion failed: {e}"
-                ) from e
+                raise RoutingError(f"ORS route planned but GPX format conversion failed: {e}") from e
 
         feature = result["features"][0]
         props = feature["properties"]

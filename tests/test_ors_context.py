@@ -11,6 +11,7 @@ OpenRouteService key plumbed via ``x-user-credentials``:
   org and no env-var fallback is set.
 * The ``ORS_API_KEY`` env var keeps working as a stdio-mode fallback.
 """
+
 import asyncio
 import json
 
@@ -282,6 +283,7 @@ class TestRoutingToolErrorMessage:
                 def decorator(fn):
                     captured[fn.__name__] = fn
                     return fn
+
                 return decorator
 
         routing_tools.register(_CapturingMCP())

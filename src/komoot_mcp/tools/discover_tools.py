@@ -87,7 +87,10 @@ def register(mcp):
         """
         try:
             data = await get_client().discover_near(
-                lat=lat, lng=lng, sport=sport, limit=limit,
+                lat=lat,
+                lng=lng,
+                sport=sport,
+                limit=limit,
             )
         except Exception as e:
             return f"Error discovering tours: {e}"
@@ -101,10 +104,7 @@ def register(mcp):
                 items = data.get("items") or []
 
         if not items:
-            return (
-                f"No discoverable tours near ({lat}, {lng}). "
-                "Try a different point or remove the sport filter."
-            )
+            return f"No discoverable tours near ({lat}, {lng}). Try a different point or remove the sport filter."
 
         header = f"Discovered {len(items)} items near ({lat}, {lng})"
         if sport:
@@ -124,9 +124,7 @@ def register(mcp):
                 main = sub_emb.get("main_tour")
                 if isinstance(main, dict):
                     name = name or main.get("name")
-                    sport_str = (
-                        sport_str if sport_str != "?" else main.get("sport") or "?"
-                    )
+                    sport_str = sport_str if sport_str != "?" else main.get("sport") or "?"
                     distance = distance if distance is not None else main.get("distance")
 
             url = None
@@ -187,22 +185,19 @@ def register(mcp):
         """
         try:
             data = await get_client().smart_tours_near(
-                lat, lng, sport, max_distance=max_distance,
+                lat,
+                lng,
+                sport,
+                max_distance=max_distance,
             )
         except Exception as e:
             return f"Error getting smart tours: {e}"
 
         items = _items(data)
         if not items:
-            return (
-                f"No smart tours near ({lat}, {lng}) for sport={sport}. "
-                "Try a different point or wider max_distance."
-            )
+            return f"No smart tours near ({lat}, {lng}) for sport={sport}. Try a different point or wider max_distance."
         lines = [
-            (
-                f"Smart Tours near ({lat}, {lng}) for sport={sport} "
-                f"(max_distance {max_distance}m, {len(items)} found):"
-            )
+            (f"Smart Tours near ({lat}, {lng}) for sport={sport} (max_distance {max_distance}m, {len(items)} found):")
         ]
         for it in items[:20]:
             line = _render_tour_item(it)
@@ -235,7 +230,10 @@ def register(mcp):
         """
         try:
             data = await get_client().smart_tour_for_highlight(
-                highlight_id, lat, lng, sport=sport,
+                highlight_id,
+                lat,
+                lng,
+                sport=sport,
             )
         except Exception as e:
             return f"Error getting smart tour for highlight: {e}"
@@ -243,12 +241,7 @@ def register(mcp):
         items = _items(data)
         if not items:
             return f"No suggested tours for highlight {highlight_id}."
-        lines = [
-            (
-                f"Suggested tours for highlight {highlight_id} "
-                f"({len(items)} found):"
-            )
-        ]
+        lines = [(f"Suggested tours for highlight {highlight_id} ({len(items)} found):")]
         for it in items[:20]:
             line = _render_tour_item(it)
             if line:
@@ -280,20 +273,18 @@ def register(mcp):
         """
         try:
             data = await get_client().discover_with_attributes(
-                lat, lng, sport=sport, attributes=attributes,
+                lat,
+                lng,
+                sport=sport,
+                attributes=attributes,
             )
         except Exception as e:
             return f"Error discovering tours by attributes: {e}"
 
         items = _items(data)
         if not items:
-            return (
-                f"No tours match attributes={attributes!r} near "
-                f"({lat}, {lng})."
-            )
-        header = (
-            f"Discovered {len(items)} tours near ({lat}, {lng})"
-        )
+            return f"No tours match attributes={attributes!r} near ({lat}, {lng})."
+        header = f"Discovered {len(items)} tours near ({lat}, {lng})"
         if attributes:
             header += f" with attributes={attributes}"
         if sport:
@@ -331,7 +322,10 @@ def register(mcp):
         """
         try:
             data = await get_client().route_attribute_options(
-                lat, lng, sport, max_distance=max_distance,
+                lat,
+                lng,
+                sport,
+                max_distance=max_distance,
             )
         except Exception as e:
             return f"Error getting route attributes: {e}"
@@ -347,16 +341,11 @@ def register(mcp):
                 attrs = list(data.keys())
 
         if not attrs:
-            return (
-                f"No route attributes returned. Raw shape: "
-                f"{type(data).__name__}"
-            )
+            return f"No route attributes returned. Raw shape: {type(data).__name__}"
         lines = [f"Route attributes ({len(attrs)} options):"]
         for it in attrs:
             if isinstance(it, dict):
-                name = (
-                    it.get("name") or it.get("key") or it.get("id") or "?"
-                )
+                name = it.get("name") or it.get("key") or it.get("id") or "?"
                 label = it.get("label") or ""
                 lines.append(f"  - {name}: {label}".rstrip(": "))
             else:

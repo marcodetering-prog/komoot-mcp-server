@@ -14,6 +14,7 @@ We also assert that ``get_tour_coordinates`` now passes ``authentication``
 to ``Tour.generate_coordinates``, because it carries the same kompy
 signature requirement.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -184,7 +185,9 @@ class TestGetTourCoordinates:
             return True
 
         _, auth = _install_api_stub(
-            client, tour, generate_coords=fake_generate,
+            client,
+            tour,
+            generate_coords=fake_generate,
         )
         out = await client.get_tour_coordinates(42)
         assert captured["auth"] is auth
@@ -275,9 +278,7 @@ class TestGetTourGpxInline:
 
         def guarded_open(path, mode="r", *args, **kwargs):
             if "w" in mode or "a" in mode or "x" in mode:
-                raise AssertionError(
-                    f"GPX path must not write to disk; got open({path!r}, {mode!r})"
-                )
+                raise AssertionError(f"GPX path must not write to disk; got open({path!r}, {mode!r})")
             return real_open(path, mode, *args, **kwargs)
 
         monkeypatch.setattr("builtins.open", guarded_open)

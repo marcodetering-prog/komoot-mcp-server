@@ -7,6 +7,7 @@ kompy-built ``api.authentication``. We mock ``requests.get`` at the
 module level inside ``komoot_mcp.client`` so the network is never
 touched and we can assert URL + param + auth wiring.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -56,6 +57,7 @@ def _resp(status=200, json_body=None, text=""):
 
 # ---------------------------------------------------------------- get_tour_full
 
+
 class TestGetTourFull:
     @pytest.mark.asyncio
     async def test_hits_embed_url_with_all_embeds(self, client):
@@ -64,18 +66,21 @@ class TestGetTourFull:
         def fake_get(url, **kwargs):
             captured["url"] = url
             captured["kwargs"] = kwargs
-            return _resp(200, {
-                "id": 42,
-                "name": "Feldberg loop",
-                "sport": "hike",
-                "_embedded": {
-                    "coordinates": {"items": [{}] * 2081},
-                    "way_types": {"items": [{"type": "trail", "amount": 0.7}]},
-                    "surfaces": {"items": [{"type": "gravel", "amount": 0.6}]},
-                    "directions": {"items": [{}] * 12},
-                    "timeline": {"items": []},
+            return _resp(
+                200,
+                {
+                    "id": 42,
+                    "name": "Feldberg loop",
+                    "sport": "hike",
+                    "_embedded": {
+                        "coordinates": {"items": [{}] * 2081},
+                        "way_types": {"items": [{"type": "trail", "amount": 0.7}]},
+                        "surfaces": {"items": [{"type": "gravel", "amount": 0.6}]},
+                        "directions": {"items": [{}] * 12},
+                        "timeline": {"items": []},
+                    },
                 },
-            })
+            )
 
         with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
             out = await client.get_tour_full(42)
@@ -96,14 +101,18 @@ class TestGetTourFull:
 
     @pytest.mark.asyncio
     async def test_404_raises_friendly_error(self, client):
-        with patch(
-            "komoot_mcp.client.requests.get",
-            return_value=_resp(404, text="not found"),
-        ), pytest.raises(KomootAPIError, match="not found"):
+        with (
+            patch(
+                "komoot_mcp.client.requests.get",
+                return_value=_resp(404, text="not found"),
+            ),
+            pytest.raises(KomootAPIError, match="not found"),
+        ):
             await client.get_tour_full(999)
 
 
 # ---------------------------------------------------------------- get_highlight
+
 
 class TestGetHighlight:
     @pytest.mark.asyncio
@@ -136,7 +145,9 @@ class TestGetHighlight:
 
         with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
             out = await client.get_highlight(
-                98160, with_tips=True, with_recommenders=True,
+                98160,
+                with_tips=True,
+                with_recommenders=True,
             )
 
         assert len(urls) == 3
@@ -148,6 +159,7 @@ class TestGetHighlight:
 
 # ---------------------------------------------------------------- get_tour_weather
 
+
 class TestGetTourWeather:
     @pytest.mark.asyncio
     async def test_hits_weather_service_host(self, client):
@@ -156,17 +168,19 @@ class TestGetTourWeather:
         def fake_get(url, **kwargs):
             captured["url"] = url
             captured["params"] = kwargs.get("params")
-            return _resp(200, {"forecast": [
-                {"time": "2026-05-18T08:00", "temperature": 12, "condition": "clear"},
-            ]})
+            return _resp(
+                200,
+                {
+                    "forecast": [
+                        {"time": "2026-05-18T08:00", "temperature": 12, "condition": "clear"},
+                    ]
+                },
+            )
 
         with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
             out = await client.get_tour_weather(42)
 
-        assert (
-            captured["url"]
-            == "https://weather-along-tour-api.komoot.de/v1/weather"
-        )
+        assert captured["url"] == "https://weather-along-tour-api.komoot.de/v1/weather"
         assert captured["params"] == {"tour_id": 42}
         assert out["forecast"][0]["temperature"] == 12
 
@@ -181,6 +195,7 @@ class TestGetTourWeather:
                 def decorator(fn):
                     registered[fn.__name__] = fn
                     return fn
+
                 return decorator
 
         from komoot_mcp.context import (
@@ -198,6 +213,7 @@ class TestGetTourWeather:
         token = set_auth_manager(am)
         try:
             from komoot_mcp.context import get_client
+
             c = get_client()
             api = MagicMock()
             auth = MagicMock()
@@ -221,6 +237,7 @@ class TestGetTourWeather:
 
 # ---------------------------------------------------------------- discover_near
 
+
 class TestDiscoverNear:
     @pytest.mark.asyncio
     async def test_builds_lat_lng_path_segment(self, client):
@@ -229,19 +246,26 @@ class TestDiscoverNear:
         def fake_get(url, **kwargs):
             captured["url"] = url
             captured["params"] = kwargs.get("params")
-            return _resp(200, {"_embedded": {"items": [
-                {"type": "tour", "name": "Sample", "sport": "hike", "id": 1},
-            ]}})
+            return _resp(
+                200,
+                {
+                    "_embedded": {
+                        "items": [
+                            {"type": "tour", "name": "Sample", "sport": "hike", "id": 1},
+                        ]
+                    }
+                },
+            )
 
         with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
             out = await client.discover_near(
-                lat=47.87, lng=8.0, sport="hike", limit=5,
+                lat=47.87,
+                lng=8.0,
+                sport="hike",
+                limit=5,
             )
 
-        assert (
-            captured["url"]
-            == "https://api.komoot.de/v007/discover/47.87,8.0/elements/"
-        )
+        assert captured["url"] == "https://api.komoot.de/v007/discover/47.87,8.0/elements/"
         assert captured["params"]["_embedded"] == "main_tour,summary"
         assert captured["params"]["sport"] == "hike"
         assert captured["params"]["limit"] == 5
@@ -263,9 +287,11 @@ class TestDiscoverNear:
 
 # ---------------------------------------------------------------- tool renderers
 
+
 @pytest.fixture(autouse=True)
 def _reset_request_state():
     from komoot_mcp.context import clear_request_state
+
     clear_request_state()
     yield
     clear_request_state()
@@ -280,6 +306,7 @@ def _register_tools(modname):
             def decorator(fn):
                 registered[fn.__name__] = fn
                 return fn
+
             return decorator
 
     mod = __import__(f"komoot_mcp.tools.{modname}", fromlist=[modname])
@@ -309,6 +336,7 @@ class TestToolRenderers:
     @pytest.mark.asyncio
     async def test_tour_full_renders_summary(self):
         from komoot_mcp.context import reset_auth_manager
+
         registered = _register_tools("browse_tools")
         token = _install_client_with_fake_kompy_auth()
         try:
@@ -331,18 +359,15 @@ class TestToolRenderers:
                             {"type": "road", "amount": 0.4},
                         ]
                     },
-                    "surfaces": {
-                        "items": [{"type": "gravel", "amount": 1.0}]
-                    },
+                    "surfaces": {"items": [{"type": "gravel", "amount": 1.0}]},
                     "directions": {"items": [{}] * 12},
-                    "timeline": {"items": [
-                        {"_embedded": {"reference": {"id": 98160, "name": "Feldberg Summit"}}}
-                    ]},
+                    "timeline": {"items": [{"_embedded": {"reference": {"id": 98160, "name": "Feldberg Summit"}}}]},
                     "cover_images": {"items": [{}]},
                 },
             }
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "komoot_mcp.client.requests.get",
+                return_value=_resp(200, body),
             ):
                 out = await registered["komoot_get_tour_full"](42)
             assert "Feldberg loop" in out
@@ -358,6 +383,7 @@ class TestToolRenderers:
     @pytest.mark.asyncio
     async def test_highlight_renders_metadata_only(self):
         from komoot_mcp.context import reset_auth_manager
+
         registered = _register_tools("browse_tools")
         token = _install_client_with_fake_kompy_auth()
         try:
@@ -370,7 +396,8 @@ class TestToolRenderers:
                 "location": {"lat": 47.87, "lng": 8.0},
             }
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "komoot_mcp.client.requests.get",
+                return_value=_resp(200, body),
             ):
                 out = await registered["komoot_get_highlight"](98160)
             assert "Highlight 98160" in out
@@ -383,35 +410,44 @@ class TestToolRenderers:
     @pytest.mark.asyncio
     async def test_discover_renders_items(self):
         from komoot_mcp.context import reset_auth_manager
+
         registered = _register_tools("discover_tools")
         token = _install_client_with_fake_kompy_auth()
         try:
-            body = {"_embedded": {"items": [
-                {
-                    "type": "tour",
-                    "name": "Black Forest loop",
-                    "sport": "hike",
-                    "distance": 12000,
-                    "id": 777,
-                },
-                {
-                    "type": "collection",
-                    "name": "Best of Feldberg",
-                    "_embedded": {
-                        "main_tour": {
-                            "id": 888,
-                            "name": "Feldberg summit",
+            body = {
+                "_embedded": {
+                    "items": [
+                        {
+                            "type": "tour",
+                            "name": "Black Forest loop",
                             "sport": "hike",
-                            "distance": 9000,
-                        }
-                    },
-                },
-            ]}}
+                            "distance": 12000,
+                            "id": 777,
+                        },
+                        {
+                            "type": "collection",
+                            "name": "Best of Feldberg",
+                            "_embedded": {
+                                "main_tour": {
+                                    "id": 888,
+                                    "name": "Feldberg summit",
+                                    "sport": "hike",
+                                    "distance": 9000,
+                                }
+                            },
+                        },
+                    ]
+                }
+            }
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "komoot_mcp.client.requests.get",
+                return_value=_resp(200, body),
             ):
                 out = await registered["komoot_recommend_tours_near"](
-                    lat=47.87, lng=8.0, sport="hike", limit=5,
+                    lat=47.87,
+                    lng=8.0,
+                    sport="hike",
+                    limit=5,
                 )
             assert "Discovered 2 items" in out
             assert "Black Forest loop" in out

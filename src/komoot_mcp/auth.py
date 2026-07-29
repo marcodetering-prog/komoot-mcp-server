@@ -5,6 +5,7 @@ the ContextVar machinery in ``komoot_mcp.context``. Falls back to env
 vars only when constructed with no explicit credentials (local stdio /
 dev mode).
 """
+
 import base64
 import os
 

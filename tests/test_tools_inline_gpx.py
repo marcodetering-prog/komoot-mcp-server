@@ -15,6 +15,7 @@ or ``openrouteservice`` HTTP API; everything is mocked via the kompy /
 openrouteservice stubs installed by ``conftest.py`` plus per-test
 ``monkeypatch``.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -37,6 +38,7 @@ def _build_tool_registry(module):
             def decorator(fn):
                 registered[fn.__name__] = fn
                 return fn
+
             return decorator
 
     module.register(_Mcp())
@@ -49,6 +51,7 @@ class TestGetTourGpxToolReturnsInline:
     @pytest.mark.asyncio
     async def test_renders_gpx_in_fenced_block(self, monkeypatch):
         from komoot_mcp.tools import data_tools
+
         registered = _build_tool_registry(data_tools)
 
         # Monkeypatch the client.get_tour_gpx to return a known string.
@@ -113,6 +116,7 @@ class TestGetTourWayTypesRendering:
     @pytest.mark.asyncio
     async def test_renders_percentages(self, monkeypatch):
         from komoot_mcp.tools import data_tools
+
         registered = _build_tool_registry(data_tools)
 
         class _FakeClient:
@@ -167,22 +171,28 @@ class TestPlanRouteHappyPathReturnsGpxInline:
 
         class _FakeGeocoder:
             def forward(self, query, limit=1):
-                return [{"lat": 49.0094, "lon": 8.4001,
-                         "display_name": "X", "city": "Y",
-                         "country": "DE", "type": "place"}]
+                return [
+                    {"lat": 49.0094, "lon": 8.4001, "display_name": "X", "city": "Y", "country": "DE", "type": "place"}
+                ]
 
             def reverse(self, lat, lon):  # pragma: no cover - unused here
                 return {}
 
         monkeypatch.setattr(
-            routing_tools, "get_routing_manager", lambda: _FakeRouting(),
+            routing_tools,
+            "get_routing_manager",
+            lambda: _FakeRouting(),
         )
         monkeypatch.setattr(
-            routing_tools, "get_geocoder", lambda: _FakeGeocoder(),
+            routing_tools,
+            "get_geocoder",
+            lambda: _FakeGeocoder(),
         )
 
         out = await registered["komoot_plan_route"](
-            start="49.0094,8.4001", end="49.0136,8.4045", sport="hike",
+            start="49.0094,8.4001",
+            end="49.0136,8.4045",
+            sport="hike",
         )
         # No spurious "HTTP Error: 200" or "Route planning failed".
         assert "Route planning failed" not in out
@@ -229,16 +239,21 @@ class TestRoutingManagerGpxFetchAvoidsHttp200Bug:
         def fake_directions(**kwargs):
             client_calls.append(kwargs)
             assert kwargs.get("format") != "gpx", (
-                "GPX must not flow through the ORS Python client — "
-                "that's the issue #11 bug."
+                "GPX must not flow through the ORS Python client — that's the issue #11 bug."
             )
             return {
-                "features": [{
-                    "properties": {"summary": {
-                        "distance": 5500, "ascent": 120, "duration": 5400,
-                    }},
-                    "geometry": {"coordinates": [[8.4, 49.0], [8.41, 49.01]]},
-                }]
+                "features": [
+                    {
+                        "properties": {
+                            "summary": {
+                                "distance": 5500,
+                                "ascent": 120,
+                                "duration": 5400,
+                            }
+                        },
+                        "geometry": {"coordinates": [[8.4, 49.0], [8.41, 49.01]]},
+                    }
+                ]
             }
 
         manager.client.directions = fake_directions
@@ -265,7 +280,9 @@ class TestRoutingManagerGpxFetchAvoidsHttp200Bug:
         monkeypatch.setattr(routing_mod.requests, "post", fake_post)
 
         out = manager.plan_route(
-            start=(49.0, 8.4), end=(49.01, 8.41), sport="hike",
+            start=(49.0, 8.4),
+            end=(49.01, 8.41),
+            sport="hike",
         )
         # As of issue #18, plan_route post-processes the ORS GPX into
         # track format before returning. The body therefore won't match
@@ -275,7 +292,9 @@ class TestRoutingManagerGpxFetchAvoidsHttp200Bug:
         assert "<trk>" in out["gpx"]
         # And opt-in raw mode returns the original ORS body verbatim.
         raw = manager.plan_route(
-            start=(49.0, 8.4), end=(49.01, 8.41), sport="hike",
+            start=(49.0, 8.4),
+            end=(49.01, 8.41),
+            sport="hike",
             _raw_ors_gpx=True,
         )
         assert raw["gpx"] == gpx_body

@@ -154,7 +154,8 @@ def register(mcp):
                 f"  Waypoints: {len(result['waypoints'])} points\n\n"
             )
             gpx_block = _format_gpx_response(
-                f"planned {sport} route", result["gpx"],
+                f"planned {sport} route",
+                result["gpx"],
             )
             return summary + gpx_block
         except Exception as e:
@@ -277,7 +278,8 @@ def register(mcp):
         planner = KomootNativePlanner(auth_pair=auth_pair)
         try:
             route = planner.plan(
-                waypoints=all_waypoints, sport_komoot=sport_komoot,
+                waypoints=all_waypoints,
+                sport_komoot=sport_komoot,
             )
         except RoutingError as e:
             return f"Route planning failed: {e}"
@@ -288,15 +290,14 @@ def register(mcp):
         name = tour_name or f"Planned {sport} route"
         try:
             saved = await client.save_planned_tour(
-                route_response=route, name=name, status=tour_status,
+                route_response=route,
+                name=name,
+                status=tour_status,
             )
         except Exception as e:
             distance_km = round((route.get("distance") or 0) / 1000, 2)
             elev_m = round(route.get("elevation_up") or 0, 1)
-            return (
-                f"Route planned ({distance_km} km, {elev_m} m climb) "
-                f"but save to Komoot failed: {e}"
-            )
+            return f"Route planned ({distance_km} km, {elev_m} m climb) but save to Komoot failed: {e}"
 
         # --- Format response ---
         distance_km = round((route.get("distance") or 0) / 1000, 2)
@@ -316,9 +317,7 @@ def register(mcp):
             lines.append(f"  Tour ID: {tid}")
             lines.append(f"  URL: https://www.komoot.com/tour/{tid}")
         else:
-            lines.append(
-                "  Tour ID: <not returned by Komoot> — check your tours list."
-            )
+            lines.append("  Tour ID: <not returned by Komoot> — check your tours list.")
         return "\n".join(lines)
 
 

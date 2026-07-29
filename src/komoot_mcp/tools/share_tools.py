@@ -29,24 +29,11 @@ def register(mcp):
 
         if not isinstance(data, dict):
             return f"Created share link for tour {tour_id}: {data}"
-        token = (
-            data.get("token")
-            or data.get("share_token")
-            or data.get("value")
-        )
+        token = data.get("token") or data.get("share_token") or data.get("value")
         if not token:
-            return (
-                f"Share link created for tour {tour_id} but no token field "
-                f"recognised. Raw keys: {list(data.keys())}"
-            )
-        url = (
-            f"https://www.komoot.com/tour/{tour_id}?share_token={token}"
-        )
-        return (
-            f"Share link created for tour {tour_id}:\n"
-            f"  Token: {token}\n"
-            f"  URL: {url}"
-        )
+            return f"Share link created for tour {tour_id} but no token field recognised. Raw keys: {list(data.keys())}"
+        url = f"https://www.komoot.com/tour/{tour_id}?share_token={token}"
+        return f"Share link created for tour {tour_id}:\n  Token: {token}\n  URL: {url}"
 
     @mcp.tool()
     async def komoot_revoke_share_link(tour_id: int) -> str:
