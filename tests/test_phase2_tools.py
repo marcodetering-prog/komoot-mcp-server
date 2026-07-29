@@ -1,11 +1,11 @@
 """Tests for the four phase-2 tools added in feat/phase2-...
 
 The new client methods (``get_tour_full``, ``get_highlight``,
-``get_tour_weather``, ``discover_near``) all share the same plumbing:
-they call ``requests.get`` directly with Basic auth pulled off the
-kompy-built ``api.authentication``. We mock ``requests.get`` at the
-module level inside ``komoot_mcp.client`` so the network is never
-touched and we can assert URL + param + auth wiring.
+``get_tour_weather``, ``discover_near``) all issue a GET with Basic auth
+pulled off the kompy-built ``api.authentication``. Those now go through the
+per-client Session, so we patch ``requests.Session.get``. Patching the
+unbound method with a ``MagicMock`` injects no ``self``, which keeps the
+fakes' signatures unchanged.
 """
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ class TestGetTourFull:
                 },
             })
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             out = await client.get_tour_full(42)
 
         assert captured["url"] == "https://api.komoot.de/v007/tours/42"
@@ -97,7 +97,7 @@ class TestGetTourFull:
     @pytest.mark.asyncio
     async def test_404_raises_friendly_error(self, client):
         with patch(
-            "komoot_mcp.client.requests.get",
+            "requests.Session.get",
             return_value=_resp(404, text="not found"),
         ):
             with pytest.raises(KomootAPIError, match="not found"):
@@ -115,7 +115,7 @@ class TestGetHighlight:
             urls.append(url)
             return _resp(200, {"id": 98160, "name": "Feldberg Summit"})
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             out = await client.get_highlight(98160)
 
         assert urls == ["https://api.komoot.de/v007/highlights/98160"]
@@ -135,7 +135,7 @@ class TestGetHighlight:
                 return _resp(200, {"items": [{"id": "u1"}, {"id": "u2"}]})
             return _resp(200, {"id": 98160, "name": "Feldberg Summit"})
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             out = await client.get_highlight(
                 98160, with_tips=True, with_recommenders=True,
             )
@@ -161,7 +161,7 @@ class TestGetTourWeather:
                 {"time": "2026-05-18T08:00", "temperature": 12, "condition": "clear"},
             ]})
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             out = await client.get_tour_weather(42)
 
         assert (
@@ -208,7 +208,7 @@ class TestGetTourWeather:
             c._api = api
 
             with patch(
-                "komoot_mcp.client.requests.get",
+                "requests.Session.get",
                 return_value=_resp(400, text="bad request"),
             ):
                 out = await registered["komoot_tour_weather"](42)
@@ -234,7 +234,7 @@ class TestDiscoverNear:
                 {"type": "tour", "name": "Sample", "sport": "hike", "id": 1},
             ]}})
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             out = await client.discover_near(
                 lat=47.87, lng=8.0, sport="hike", limit=5,
             )
@@ -256,7 +256,7 @@ class TestDiscoverNear:
             captured["params"] = kwargs.get("params")
             return _resp(200, {"_embedded": {"items": []}})
 
-        with patch("komoot_mcp.client.requests.get", side_effect=fake_get):
+        with patch("requests.Session.get", side_effect=fake_get):
             await client.discover_near(lat=50, lng=10)
 
         assert "sport" not in captured["params"]
@@ -343,7 +343,7 @@ class TestToolRenderers:
                 },
             }
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "requests.Session.get", return_value=_resp(200, body),
             ):
                 out = await registered["komoot_get_tour_full"](42)
             assert "Feldberg loop" in out
@@ -371,7 +371,7 @@ class TestToolRenderers:
                 "location": {"lat": 47.87, "lng": 8.0},
             }
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "requests.Session.get", return_value=_resp(200, body),
             ):
                 out = await registered["komoot_get_highlight"](98160)
             assert "Highlight 98160" in out
@@ -409,7 +409,7 @@ class TestToolRenderers:
                 },
             ]}}
             with patch(
-                "komoot_mcp.client.requests.get", return_value=_resp(200, body),
+                "requests.Session.get", return_value=_resp(200, body),
             ):
                 out = await registered["komoot_recommend_tours_near"](
                     lat=47.87, lng=8.0, sport="hike", limit=5,

@@ -159,7 +159,18 @@ def clear_request_state() -> None:
 
     Middleware calls this in a ``finally`` block to make absolutely
     sure no tenant state is held by the worker after a response.
+
+    The client close is best-effort and usually a no-op: tools build the
+    client lazily via ``get_client()`` inside the MCP handler's own context,
+    and a ``ContextVar.set`` there does not propagate back out to the
+    middleware, so ``_client_var`` is normally None by the time we get here.
+    Session sockets are then released by GC. The call stays because it is
+    correct whenever the client *is* visible, and because building the
+    client eagerly in middleware would otherwise leak sockets silently.
     """
+    client = _client_var.get()
+    if client is not None:
+        client.close()
     _auth_var.set(None)
     _client_var.set(None)
     _ors_api_key_var.set(None)

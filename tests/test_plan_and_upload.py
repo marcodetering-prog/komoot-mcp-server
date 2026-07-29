@@ -135,10 +135,13 @@ class TestPlanAndUploadTool:
         }
 
         plan_calls = []
+        planners = []
 
         class _FakePlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 self.auth_pair = auth_pair
+                self.session = session
+                planners.append(self)
 
             def plan(self, waypoints, sport_komoot, constitution=3):
                 plan_calls.append({
@@ -151,6 +154,8 @@ class TestPlanAndUploadTool:
         save_calls = []
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -188,6 +193,8 @@ class TestPlanAndUploadTool:
         assert "12.35 km" in out
         # Sport mapping: mountain_bike → mtb on the native planner side.
         assert plan_calls[0]["sport_komoot"] == "mtb"
+        # Planner gets the client's Session so plan+save share a connection.
+        assert planners[0].session == "sentinel-session"
         # Custom tour name flows through.
         assert save_calls[0]["name"] == "MTB cross-country"
         # Privacy defaults to private and surfaces in the response.
@@ -203,13 +210,15 @@ class TestPlanAndUploadTool:
         }
 
         class _FakePlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 pass
 
             def plan(self, **kwargs):
                 return fake_route
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -243,7 +252,7 @@ class TestPlanAndUploadTool:
         save_calls = []
 
         class _FailingPlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 pass
 
             def plan(self, **kwargs):
@@ -252,6 +261,8 @@ class TestPlanAndUploadTool:
                 raise RoutingError("Komoot planner request failed (HTTP 500)")
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -280,13 +291,15 @@ class TestPlanAndUploadTool:
         registered, routing_tools = _register_routing_tools()
 
         class _NeverCalledPlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 pass
 
             def plan(self, **kwargs):  # pragma: no cover - assertion fails first
                 raise AssertionError("planner should not be called")
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -315,7 +328,7 @@ class TestPlanAndUploadTool:
         captured = {}
 
         class _FakePlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 pass
 
             def plan(self, waypoints, sport_komoot, constitution=3):
@@ -325,6 +338,8 @@ class TestPlanAndUploadTool:
                         "elevation_up": 100, "elevation_down": 100}
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -363,7 +378,7 @@ class TestPlanAndUploadTool:
         captured = {}
 
         class _FakePlanner:
-            def __init__(self, auth_pair):
+            def __init__(self, auth_pair, session=None):
                 pass
 
             def plan(self, waypoints, sport_komoot, constitution=3):
@@ -372,6 +387,8 @@ class TestPlanAndUploadTool:
                         "elevation_up": 0, "elevation_down": 0}
 
         class _FakeClient:
+            _session = "sentinel-session"
+
             def _basic_auth(self):
                 return ("uid", "tok")
 
@@ -420,8 +437,6 @@ class TestUploadGpxCaptureId:
         api.authentication.get_password = MagicMock(return_value="pw")
         client._api = api
 
-        from komoot_mcp import client as client_mod
-
         def fake_post(url, auth=None, headers=None, params=None, data=None, **kwargs):
             assert "tours" in url
             assert params["data_type"] == "gpx"
@@ -431,7 +446,9 @@ class TestUploadGpxCaptureId:
             assert params["type"] == "tour_planned"
             return _FakeKomootResponse(status_code=201, body={"id": 555})
 
-        monkeypatch.setattr(client_mod.requests, "post", fake_post)
+        # Patch the instance attribute, not the class: a class-level
+        # function would get ``self`` bound into the fake.
+        monkeypatch.setattr(client._session, "post", fake_post)
 
         out = await client.upload_gpx_capture_id(
             gpx_content=GPX_SAMPLE, sport="hike", tour_name="x",
@@ -449,15 +466,15 @@ class TestUploadGpxCaptureId:
         api.authentication.get_password = MagicMock(return_value="pw")
         client._api = api
 
-        from komoot_mcp import client as client_mod
-
         seen = {}
 
         def fake_post(url, auth=None, headers=None, params=None, data=None, **kwargs):
             seen.update(params)
             return _FakeKomootResponse(status_code=201, body={"id": 1})
 
-        monkeypatch.setattr(client_mod.requests, "post", fake_post)
+        # Patch the instance attribute, not the class: a class-level
+        # function would get ``self`` bound into the fake.
+        monkeypatch.setattr(client._session, "post", fake_post)
 
         await client.upload_gpx_capture_id(
             gpx_content=GPX_SAMPLE, sport="hike", tour_type="tour_recorded",
@@ -472,12 +489,12 @@ class TestUploadGpxCaptureId:
         api.authentication.get_password = MagicMock(return_value="pw")
         client._api = api
 
-        from komoot_mcp import client as client_mod
-
         def fake_post(*a, **kw):
             return _FakeKomootResponse(status_code=202, body={"id": 999})
 
-        monkeypatch.setattr(client_mod.requests, "post", fake_post)
+        # Patch the instance attribute, not the class: a class-level
+        # function would get ``self`` bound into the fake.
+        monkeypatch.setattr(client._session, "post", fake_post)
 
         out = await client.upload_gpx_capture_id(
             gpx_content=GPX_SAMPLE, sport="hike",
@@ -492,14 +509,14 @@ class TestUploadGpxCaptureId:
         api.authentication.get_password = MagicMock(return_value="pw")
         client._api = api
 
-        from komoot_mcp import client as client_mod
-
         def fake_post(*a, **kw):
             return _FakeKomootResponse(
                 status_code=400, body={}, text="bad gpx",
             )
 
-        monkeypatch.setattr(client_mod.requests, "post", fake_post)
+        # Patch the instance attribute, not the class: a class-level
+        # function would get ``self`` bound into the fake.
+        monkeypatch.setattr(client._session, "post", fake_post)
 
         with pytest.raises(KomootAPIError) as ei:
             await client.upload_gpx_capture_id(
