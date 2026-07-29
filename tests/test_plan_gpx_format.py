@@ -13,7 +13,6 @@ import pytest
 
 from komoot_mcp.routing import RoutingManager, _ors_rte_to_trk_gpx
 
-
 # An ORS-shaped GPX with <rte>/<rtept> + per-point elevation. Pared
 # down to three points so the test stays readable but preserving the
 # format quirks Komoot rejects.

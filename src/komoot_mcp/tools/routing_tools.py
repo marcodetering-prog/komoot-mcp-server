@@ -8,7 +8,6 @@ from komoot_mcp.routing import (
 )
 from komoot_mcp.tools.data_tools import _format_gpx_response
 
-
 # Map our public sport identifiers (used by komoot_plan_route) to the
 # Komoot activity strings (used by komoot_upload_tour). The two
 # vocabularies diverged historically — ``mountain_bike`` on the routing

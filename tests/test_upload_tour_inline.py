@@ -14,13 +14,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import kompy  # the conftest stub
 import pytest
 
 from komoot_mcp.auth import AuthManager
-from komoot_mcp.client import KomootClient, KomootAPIError
+from komoot_mcp.client import KomootAPIError, KomootClient
 from komoot_mcp.context import clear_request_state
-
 
 GPX_SAMPLE = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
@@ -95,8 +93,6 @@ class TestUploadFromGpxContent:
     ):
         """Sentinel: prove no disk reads happen on the gpx_content path."""
         _install_mock_api(client)
-
-        real_open = open
 
         def guarded_open(path, mode="r", *args, **kwargs):
             raise AssertionError(
@@ -206,8 +202,8 @@ class TestToolWrapper:
 
     @pytest.mark.asyncio
     async def test_tool_accepts_gpx_content(self, monkeypatch):
-        from komoot_mcp.tools import write_tools
         from komoot_mcp import context as ctx_mod
+        from komoot_mcp.tools import write_tools
 
         registered = {}
 

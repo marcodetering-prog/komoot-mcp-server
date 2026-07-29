@@ -6,7 +6,6 @@ operation behind the platform gateway.
 """
 import asyncio
 import json
-import os
 
 import pytest
 
@@ -181,6 +180,7 @@ class TestInternalSecretMiddleware:
         monkeypatch.delenv("INTERNAL_SECRET", raising=False)
         # Re-import to pick up the env change.
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -205,6 +205,7 @@ class TestInternalSecretMiddleware:
     async def test_rejects_when_secret_mismatch(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -244,6 +245,7 @@ class TestInternalSecretMiddleware:
     async def test_rejects_when_header_missing(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -270,6 +272,7 @@ class TestInternalSecretMiddleware:
         # to send the exact Authorization: Bearer <secret> form.
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -298,6 +301,7 @@ class TestInternalSecretMiddleware:
     async def test_accepts_correct_bearer(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -328,6 +332,7 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.setenv("GATEWAY_SECRET", "gw-shared-key")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -358,6 +363,7 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.delenv("GATEWAY_SECRET", raising=False)
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -390,6 +396,7 @@ class TestInternalSecretMiddleware:
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         monkeypatch.setenv("GATEWAY_SECRET", "gw-shared-key")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 
@@ -418,6 +425,7 @@ class TestInternalSecretMiddleware:
     async def test_health_bypasses_secret_check(self, monkeypatch):
         monkeypatch.setenv("INTERNAL_SECRET", "topsecret")
         import importlib
+
         import komoot_mcp.middleware as mod
         importlib.reload(mod)
 

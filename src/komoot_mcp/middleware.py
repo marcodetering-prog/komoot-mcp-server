@@ -44,7 +44,6 @@ from komoot_mcp.context import (
     set_ors_api_key,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -100,9 +99,7 @@ class InternalSecretMiddleware:
             else None
         )
 
-        if provided == expected_direct:
-            pass
-        elif expected_gateway is not None and provided == expected_gateway:
+        if provided == expected_direct or (expected_gateway is not None and provided == expected_gateway):
             pass
         else:
             response = JSONResponse(

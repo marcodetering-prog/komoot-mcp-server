@@ -17,17 +17,9 @@ openrouteservice stubs installed by ``conftest.py`` plus per-test
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import kompy  # the conftest stub
 import pytest
 
-from komoot_mcp.auth import AuthManager
-from komoot_mcp.context import (
-    clear_request_state,
-    reset_auth_manager,
-    set_auth_manager,
-)
+from komoot_mcp.context import clear_request_state
 
 
 @pytest.fixture(autouse=True)
@@ -225,8 +217,8 @@ class TestRoutingManagerGpxFetchAvoidsHttp200Bug:
     @pytest.mark.asyncio
     async def test_gpx_path_uses_raw_http_post(self, monkeypatch):
         monkeypatch.setenv("ORS_API_KEY", "k")
-        from komoot_mcp.routing import RoutingManager
         import komoot_mcp.routing as routing_mod
+        from komoot_mcp.routing import RoutingManager
 
         manager = RoutingManager()
 

@@ -12,6 +12,7 @@ where the LLM-friendly rendering lives — and where docstring contracts
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -19,8 +20,8 @@ import pytest
 from komoot_mcp.auth import AuthManager
 from komoot_mcp.context import (
     clear_request_state,
-    set_auth_manager,
     reset_auth_manager,
+    set_auth_manager,
 )
 
 
@@ -45,7 +46,7 @@ def _make_response(*, status=200, json_body=None, text="ok"):
     class _Resp:
         status_code = status
         ok = is_ok
-        headers = {"content-type": "application/json"}
+        headers: ClassVar[dict[str, str]] = {"content-type": "application/json"}
         text = resolved_text
 
         def json(self):
@@ -69,8 +70,12 @@ def registered_tools():
             return decorator
 
     from komoot_mcp.tools import (
-        browse_tools, write_tools, highlight_tools, discover_tools,
-        collection_tools, share_tools,
+        browse_tools,
+        collection_tools,
+        discover_tools,
+        highlight_tools,
+        share_tools,
+        write_tools,
     )
     browse_tools.register(_Mcp())
     write_tools.register(_Mcp())

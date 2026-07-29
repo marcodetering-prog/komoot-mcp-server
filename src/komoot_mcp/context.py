@@ -15,12 +15,12 @@ from __future__ import annotations
 
 import os
 from contextvars import ContextVar
-from typing import Optional
 
 from komoot_mcp.auth import AuthManager
 from komoot_mcp.client import KomootClient
-from komoot_mcp.rate_limiter import RateLimiter
 from komoot_mcp.geocoder import Geocoder
+from komoot_mcp.rate_limiter import RateLimiter
+
 # RoutingManager is imported lazily — its only hard dep is the
 # openrouteservice client, which we don't want to require for unit
 # tests that exercise auth/tour tools alone.
@@ -28,16 +28,16 @@ from komoot_mcp.geocoder import Geocoder
 
 # Per-request state. Tools must NEVER look at module globals — always
 # resolve through ``get_*`` helpers so multi-tenant isolation holds.
-_auth_var: ContextVar[Optional[AuthManager]] = ContextVar(
+_auth_var: ContextVar[AuthManager | None] = ContextVar(
     "komoot_auth_manager", default=None
 )
-_client_var: ContextVar[Optional[KomootClient]] = ContextVar(
+_client_var: ContextVar[KomootClient | None] = ContextVar(
     "komoot_client", default=None
 )
 # OpenRouteService API key — per-org credential plumbed via x-user-credentials.
 # Tools that hit ORS (currently komoot_plan_route) MUST read through
 # ``get_ors_api_key`` so two concurrent tenants never share a key.
-_ors_api_key_var: ContextVar[Optional[str]] = ContextVar(
+_ors_api_key_var: ContextVar[str | None] = ContextVar(
     "komoot_ors_api_key", default=None
 )
 
@@ -101,7 +101,7 @@ def reset_ors_api_key(token: object) -> None:
     _ors_api_key_var.reset(token)  # type: ignore[arg-type]
 
 
-def get_ors_api_key() -> Optional[str]:
+def get_ors_api_key() -> str | None:
     """Return the current request's ORS API key.
 
     Resolution order:

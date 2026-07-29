@@ -177,9 +177,9 @@ class KomootNativePlanner:
                 timeout=60,
             )
         except requests.exceptions.Timeout as e:
-            raise RoutingError(f"Komoot planner timed out: {e}")
+            raise RoutingError(f"Komoot planner timed out: {e}") from e
         except requests.exceptions.RequestException as e:
-            raise RoutingError(f"Komoot planner transport error: {e}")
+            raise RoutingError(f"Komoot planner transport error: {e}") from e
 
         if resp.status_code != 200:
             snippet = (resp.text or "")[:400]
@@ -190,7 +190,7 @@ class KomootNativePlanner:
         try:
             return resp.json()
         except ValueError as e:
-            raise RoutingError(f"Komoot planner returned non-JSON: {e}")
+            raise RoutingError(f"Komoot planner returned non-JSON: {e}") from e
 
 # ORS only allows specific avoid_features values per profile family. Sending
 # the wrong one (e.g. "highways" on cycling-mountain) causes a request-wide
@@ -293,9 +293,9 @@ class RoutingManager:
                 timeout=self.client._timeout,
             )
         except requests.exceptions.Timeout as e:
-            raise RoutingError(f"OpenRouteService timed out fetching GPX: {e}")
+            raise RoutingError(f"OpenRouteService timed out fetching GPX: {e}") from e
         except requests.exceptions.RequestException as e:
-            raise RoutingError(f"OpenRouteService transport error: {e}")
+            raise RoutingError(f"OpenRouteService transport error: {e}") from e
 
         if resp.status_code != 200:
             # Try to surface a useful body (ORS returns JSON for errors
@@ -328,17 +328,16 @@ class RoutingManager:
                 # Bikers wanting trails want to avoid steps & fords.
                 requested.append("steps")
             # foot-* has no good "prefer trails" toggle in avoid_features.
-        if avoid_roads:
-            if family == "driving":
-                requested.append("highways")
-            # On cycling/foot, "avoid_roads" doesn't map to any ORS
-            # avoid_features value — leave the request open rather than
-            # ship an invalid one. Prefer_trails covers the steps case.
+        # On cycling/foot, "avoid_roads" doesn't map to any ORS
+        # avoid_features value — leave the request open rather than
+        # ship an invalid one. Prefer_trails covers the steps case.
+        if avoid_roads and family == "driving":
+            requested.append("highways")
         avoid_features = _filter_avoid_features(profile, list(set(requested)))
         options = {}
         if avoid_features:
             options["avoid_features"] = avoid_features
-        return options if options else None
+        return options or None
 
     def plan_route(self, start, end=None, roundtrip=False, target_distance_km=None,
                    sport="hike", prefer_trails=False, avoid_roads=False, waypoints=None,
@@ -386,13 +385,13 @@ class RoutingManager:
                 radiuses=radiuses,
             )
         except openrouteservice.exceptions.ApiError as e:
-            raise RoutingError(f"OpenRouteService error: {e}")
+            raise RoutingError(f"OpenRouteService error: {e}") from e
         except openrouteservice.exceptions.HTTPError as e:
-            raise RoutingError(f"OpenRouteService transport error: {e}")
+            raise RoutingError(f"OpenRouteService transport error: {e}") from e
         except RoutingError:
             raise
         except Exception as e:
-            raise RoutingError(f"Route planning failed: {e}")
+            raise RoutingError(f"Route planning failed: {e}") from e
 
         # GPX format is XML — the ORS client unconditionally calls
         # ``response.json()`` on it and raises ``HTTPError(200)``. Fetch
@@ -424,7 +423,7 @@ class RoutingManager:
                 # to work with, plus a clear hint in the error.
                 raise RoutingError(
                     f"ORS route planned but GPX format conversion failed: {e}"
-                )
+                ) from e
 
         feature = result["features"][0]
         props = feature["properties"]

@@ -199,8 +199,10 @@ def register(mcp):
                 "Try a different point or wider max_distance."
             )
         lines = [
-            f"Smart Tours near ({lat}, {lng}) for sport={sport} "
-            f"(max_distance {max_distance}m, {len(items)} found):"
+            (
+                f"Smart Tours near ({lat}, {lng}) for sport={sport} "
+                f"(max_distance {max_distance}m, {len(items)} found):"
+            )
         ]
         for it in items[:20]:
             line = _render_tour_item(it)
@@ -242,8 +244,10 @@ def register(mcp):
         if not items:
             return f"No suggested tours for highlight {highlight_id}."
         lines = [
-            f"Suggested tours for highlight {highlight_id} "
-            f"({len(items)} found):"
+            (
+                f"Suggested tours for highlight {highlight_id} "
+                f"({len(items)} found):"
+            )
         ]
         for it in items[:20]:
             line = _render_tour_item(it)

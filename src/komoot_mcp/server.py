@@ -9,25 +9,22 @@ Runs as either:
   ``middleware.py`` for the wire format.
 """
 
-import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from mcp.server import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from mcp.server import FastMCP
 
 from komoot_mcp.tools import (
     auth_tools,
     browse_tools,
+    collection_tools,
     data_tools,
-    write_tools,
-    routing_tools,
     discover_tools,
     highlight_tools,
-    collection_tools,
+    routing_tools,
     share_tools,
+    write_tools,
 )
 
 
@@ -75,6 +72,7 @@ def _run_http(mcp: FastMCP) -> None:
     the platform-integration middleware stack.
     """
     import asyncio
+
     import uvicorn
 
     # Import locally so unit tests that don't need HTTP can skip these.

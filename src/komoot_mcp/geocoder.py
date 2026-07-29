@@ -1,7 +1,8 @@
 import json
 import time
-import urllib.request
 import urllib.parse
+import urllib.request
+
 
 class GeocoderError(Exception):
     pass
@@ -26,7 +27,7 @@ class Geocoder:
             with urllib.request.urlopen(url, timeout=15) as resp:
                 data = json.loads(resp.read().decode())
         except urllib.error.URLError as e:
-            raise GeocoderError(f"Geocoding failed: {e}")
+            raise GeocoderError(f"Geocoding failed: {e}") from e
 
         results = []
         for feat in data.get("features", []):
@@ -52,7 +53,7 @@ class Geocoder:
             with urllib.request.urlopen(url, timeout=15) as resp:
                 data = json.loads(resp.read().decode())
         except urllib.error.URLError as e:
-            raise GeocoderError(f"Reverse geocoding failed: {e}")
+            raise GeocoderError(f"Reverse geocoding failed: {e}") from e
 
         features = data.get("features", [])
         if not features:

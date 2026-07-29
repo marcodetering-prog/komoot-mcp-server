@@ -59,16 +59,16 @@ class KomootClient:
             if "401" in msg or "403" in msg:
                 raise KomootAPIError(
                     "Authentication failed. Check your credentials."
-                )
+                ) from e
             if "429" in msg:
                 raise KomootAPIError(
                     "Rate limited by Komoot. Try again later."
-                )
+                ) from e
             if "404" in msg:
                 raise KomootAPIError(
                     "Resource not found. Check the ID."
-                )
-            raise KomootAPIError(f"Komoot API error: {msg}")
+                ) from e
+            raise KomootAPIError(f"Komoot API error: {msg}") from e
 
     async def get_user_profile(self):
         # KomootConnector.__init__ already performs the login HTTP call
@@ -201,8 +201,7 @@ class KomootClient:
             gpx_data = getattr(tour, "gpx_track", None)
             if gpx_data is None:
                 raise KomootAPIError("Failed to generate GPX")
-            gpx_str = gpx_data.to_xml() if hasattr(gpx_data, "to_xml") else str(gpx_data)
-            return gpx_str
+            return gpx_data.to_xml() if hasattr(gpx_data, "to_xml") else str(gpx_data)
         raise KomootAPIError("Could not retrieve tour as GPX")
 
     async def get_tour_directions(self, tour_id):
@@ -447,7 +446,7 @@ class KomootClient:
         name = tour_name or os.path.splitext(os.path.basename(filepath))[0]
 
         if data_type == "gpx":
-            with open(filepath, "r") as f:
+            with open(filepath) as f:
                 tour_obj = gpxpy.parse(f)
             raw = await self._call(
                 api.upload_tour,
@@ -456,16 +455,15 @@ class KomootClient:
                 tour_name=name,
             )
             return self._normalize_upload_result(raw)
-        else:
-            with open(filepath, "rb") as f:
-                tour_obj = f.read()
-            raw = await self._call(
-                api.upload_tour,
-                tour_object=tour_obj,
-                activity_type=sport,
-                tour_name=name,
-            )
-            return self._normalize_upload_result(raw)
+        with open(filepath, "rb") as f:
+            tour_obj = f.read()
+        raw = await self._call(
+            api.upload_tour,
+            tour_object=tour_obj,
+            activity_type=sport,
+            tour_name=name,
+        )
+        return self._normalize_upload_result(raw)
 
     @staticmethod
     def _normalize_upload_result(raw):
@@ -601,7 +599,7 @@ class KomootClient:
         try:
             resp = await asyncio.to_thread(_post)
         except Exception as e:
-            raise KomootAPIError(f"Komoot upload transport error: {e}")
+            raise KomootAPIError(f"Komoot upload transport error: {e}") from e
 
         if resp.status_code in (201, 202):
             try:
@@ -686,7 +684,7 @@ class KomootClient:
         except Exception as e:
             raise KomootAPIError(
                 f"Komoot save_planned_tour transport error: {e}"
-            )
+            ) from e
 
         if resp.status_code in (200, 201):
             try:
@@ -771,13 +769,13 @@ class KomootClient:
         try:
             resp = await asyncio.to_thread(_do)
         except Exception as e:
-            raise KomootAPIError(f"Komoot transport error: {e}")
+            raise KomootAPIError(f"Komoot transport error: {e}") from e
 
         if resp.status_code == 200:
             try:
                 return resp.json()
             except ValueError as e:
-                raise KomootAPIError(f"Komoot returned non-JSON: {e}")
+                raise KomootAPIError(f"Komoot returned non-JSON: {e}") from e
         if resp.status_code in (401, 403):
             raise KomootAPIError(
                 "Authentication failed. Check your credentials."
@@ -933,7 +931,7 @@ class KomootClient:
         try:
             resp = await asyncio.to_thread(_do)
         except Exception as e:
-            raise KomootAPIError(f"Komoot transport error: {e}")
+            raise KomootAPIError(f"Komoot transport error: {e}") from e
 
         if not resp.ok:
             if resp.status_code in (401, 403):
@@ -956,7 +954,7 @@ class KomootClient:
         try:
             return resp.json()
         except ValueError as e:
-            raise KomootAPIError(f"Komoot returned non-JSON ({url}): {e}")
+            raise KomootAPIError(f"Komoot returned non-JSON ({url}): {e}") from e
 
     async def _komoot_get(self, url, params=None, no_auth=False):
         return await self._http_request(
@@ -1176,7 +1174,7 @@ class KomootClient:
         the normal authenticated endpoint.
         """
         import re
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import parse_qs, urlparse
 
         m = re.search(r"/tour/(\d+)", share_url)
         if not m:
@@ -1196,4 +1194,3 @@ class KomootClient:
         else:
             data = await self._komoot_get(url, params=params)
         return {"tour_id": tour_id, "share_token": share_token, "tour": data}
-

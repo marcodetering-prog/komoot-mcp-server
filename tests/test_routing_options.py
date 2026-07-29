@@ -18,9 +18,9 @@ import pytest
 
 from komoot_mcp.routing import (
     _DEFAULT_SNAP_RADIUS_M,
+    RoutingManager,
     _filter_avoid_features,
     _to_lon_lat,
-    RoutingManager,
 )
 
 

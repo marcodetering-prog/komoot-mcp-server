@@ -27,11 +27,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import kompy  # the conftest stub
 from komoot_mcp.auth import AuthManager
 from komoot_mcp.client import KomootAPIError, KomootClient
 from komoot_mcp.context import clear_request_state
-
 
 GPX_SAMPLE = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">

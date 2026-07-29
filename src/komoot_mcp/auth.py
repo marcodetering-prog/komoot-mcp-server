@@ -5,8 +5,9 @@ the ContextVar machinery in ``komoot_mcp.context``. Falls back to env
 vars only when constructed with no explicit credentials (local stdio /
 dev mode).
 """
-import os
 import base64
+import os
+
 import requests
 
 
@@ -39,9 +40,9 @@ class AuthManager:
             self.user_id = data.get("username")
             self.token = data.get("password")
             if not self.user_id or not self.token:
-                raise AuthError(f"Unexpected login response: missing user_id or token")
+                raise AuthError("Unexpected login response: missing user_id or token")
         except requests.exceptions.RequestException as e:
-            raise AuthError(f"Login failed: {e}")
+            raise AuthError(f"Login failed: {e}") from e
 
     def get_auth_headers(self):
         if not self.is_authenticated():

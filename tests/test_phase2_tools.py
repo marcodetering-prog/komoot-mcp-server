@@ -99,9 +99,8 @@ class TestGetTourFull:
         with patch(
             "komoot_mcp.client.requests.get",
             return_value=_resp(404, text="not found"),
-        ):
-            with pytest.raises(KomootAPIError, match="not found"):
-                await client.get_tour_full(999)
+        ), pytest.raises(KomootAPIError, match="not found"):
+            await client.get_tour_full(999)
 
 
 # ---------------------------------------------------------------- get_highlight

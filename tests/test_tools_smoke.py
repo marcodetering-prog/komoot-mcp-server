@@ -11,19 +11,16 @@ attributes on it from here works because the reference is shared.
 """
 from __future__ import annotations
 
-import sys
 from unittest.mock import patch
 
 import kompy  # the conftest stub
 import pytest
 
 from komoot_mcp.auth import AuthManager
-from komoot_mcp.client import KomootClient
 from komoot_mcp.context import (
     clear_request_state,
-    get_auth_manager,
-    set_auth_manager,
     reset_auth_manager,
+    set_auth_manager,
 )
 
 
