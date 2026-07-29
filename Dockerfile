@@ -19,16 +19,11 @@ COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /app/src /app/src
 COPY --from=base /app/pyproject.toml /app/
 
-# Writable scratch dir for GPX downloads. KOMOOT_DATA_DIR controls
-# where tools save default-named files; align it with this path.
-RUN mkdir -p /tmp/komoot && chown nobody:nogroup /tmp/komoot
-
 # /app must be readable by the unprivileged user; mark it owned by
 # nobody so future code paths that want to write here also work.
 RUN chown -R nobody:nogroup /app
 
 ENV PYTHONUNBUFFERED=1
-ENV KOMOOT_DATA_DIR=/tmp/komoot
 
 USER nobody
 EXPOSE 3007

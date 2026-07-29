@@ -7,7 +7,6 @@ services:
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=3007
-      - KOMOOT_DATA_DIR=${KOMOOT_DATA_DIR:-/tmp/komoot}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
     networks:
       backends:

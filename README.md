@@ -41,7 +41,6 @@ In stdio mode, credentials come from environment variables.
 | `KOMOOT_EMAIL` | Your Komoot account email address |
 | `KOMOOT_PASSWORD` | Your Komoot account password |
 | `ORS_API_KEY` | Optional [OpenRouteService API key](https://openrouteservice.org) — enables the `komoot_plan_route` tool |
-| `KOMOOT_DATA_DIR` | _Vestigial._ Previously used to stage GPX files on the server's filesystem. The GPX tools now return content inline in the tool response (see [issue #9](https://github.com/Eric-AI-M/komoot-mcp-server/issues/9)); this var is accepted for back-compat but unused. |
 | `KOMOOT_RATE_LIMIT` | Outbound requests per second to Komoot. Default `2` |
 
 ### Platform-integration mode (Eric AI gateway)
