@@ -190,6 +190,23 @@ The `komoot_plan_route` tool supports these sport profiles, each mapped to an Op
 - [gpxpy](https://pypi.org/project/gpxpy/) — GPX parsing for uploads
 - [openrouteservice](https://pypi.org/project/openrouteservice/) — OpenRouteService client (optional, for route planning)
 
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest                  # test suite
+ruff check .            # lint
+ruff format --check .   # formatting
+```
+
+Both are configured in `pyproject.toml`. The rule set is broad but not maximal —
+the sections that are switched off carry a comment saying why, so please read
+those before adding to them.
+
+The whole tree was reformatted in one commit when `ruff format` was adopted. Pass
+`--ignore-rev` to `git blame` (or add that commit to `.git-blame-ignore-revs`) to
+skip past it.
+
 ## License
 
 This project is provided as-is. See the repository for license details.
