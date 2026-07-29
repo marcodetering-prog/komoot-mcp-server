@@ -190,7 +190,7 @@ class KomootClient:
         path on the MCP server's filesystem (formerly ``KOMOOT_DATA_DIR``)
         was useless in the multi-tenant gateway deployment, because the
         caller has no access to the server's disk. ``KOMOOT_DATA_DIR``
-        is now vestigial.
+        no longer exists anywhere in the project.
         """
         api = self._get_api()
         tour = await self._call(api.get_tour_by_id, str(tour_id))
